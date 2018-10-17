@@ -1,0 +1,13 @@
+Objects/
+Listings/
+DebugConfig/
+*.o
+JLinkLog.txt
+JLinkSettings.ini
+*.uvopt
+*.htm
+*.html
+*.doc
+*.dep
+*.bak
+*.uvgui.*
