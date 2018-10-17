@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "stm32f10x.h"                  // Device header
 #include "cmsis_os.h"                   // ARM::CMSIS:RTOS:Keil RTX
 #include "GPIO_STM32F10x.h"

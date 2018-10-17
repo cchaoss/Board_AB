@@ -3,7 +3,18 @@
 
 #include "main.h"
 
-enum _sta
+enum _BMS_STA
+{
+	SEND_9728,
+	SEND_256,
+	SEND_2048,
+	SEND_2560,
+	SEND_4608,
+	SEND_6656,
+	SEND_7424,
+	SEND_7936
+};
+enum _rx_bms_sta
 {
 	WAIT_9984_BHM,
 	WAIT_512_BRM,
@@ -37,6 +48,7 @@ typedef struct
 	uint8_t PDUSpecific;		//目的地址
 	uint8_t SourceAddress;	//源地址
 	uint8_t DLC;						//数据长度
+	uint8_t Period;					//发送周期ms
 	void *Data;
 }TX_BMS;  	
 
