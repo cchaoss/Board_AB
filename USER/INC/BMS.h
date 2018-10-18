@@ -2,6 +2,7 @@
 #define __BMS_H
 
 #include "main.h"
+#include "stm32f10x_can.h"
 
 enum _BMS_STA
 {
@@ -190,8 +191,8 @@ typedef struct
 }stuPGN7680Type;//BMS´íÎó±¨ÎÄ
 #pragma pack()
 
-
-
+extern unsigned char J1939_Multi_Package[8];
+extern CanTxMsg TxMsg1;
 static unsigned char BMS_Send(TX_BMS Pbuf);
 
 	

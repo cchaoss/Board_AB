@@ -184,6 +184,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>kkk</ItemText>
         </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RX_BMS_TAB[1].Rx_status</ItemText>
+        </Ww>
+        <Ww>
+          <count>3</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RX_BMS_TAB[2].Rx_status</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

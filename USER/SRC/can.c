@@ -120,16 +120,37 @@ unsigned char Can_Send_Msg(CAN_TypeDef* CANx, CanTxMsg* TxMessage)
 
 
 /**********************************************中断处理*****************************************************/
-unsigned char BMS_Recevie_Flag;
+uint8_t buf[8];
+volatile unsigned char BMS_Recevie_Flag;
 CanRxMsg RxMsg1;
 //CAN_1FIFO中断服务函数			    
 void CAN1_RX0_IRQHandler(void)
 {
 	if(CAN_MessagePending(CAN1,CAN_FIFO0) != 0)
 	{	
-		BMS_Recevie_Flag = 1;
-		CAN_Receive(CAN1, 0, &RxMsg1);
+		CAN_Receive(CAN1, CAN_FIFO0, &RxMsg1);
+		
+			if(RxMsg1.ExtId == 0X1CEC56F4)//BMS请求建立多包发送连接
+			{	
+				memcpy(buf,RxMsg1.Data,RxMsg1.DLC);
+				if(RxMsg1.Data[0] == 0x10)
+				{
+					memcpy(J1939_Multi_Package,RxMsg1.Data,RxMsg1.DLC);//保存多包发送连接的配置数据					
+					TxMsg1.ExtId = 0X1CECF456;			 //应答多包发送请求
+					TxMsg1.DLC = 8;																	
+					TxMsg1.Data[0] = 0x11;									//应答头	
+					TxMsg1.Data[1] = J1939_Multi_Package[3];//可发送包数
+					TxMsg1.Data[2] = 1;											//包号
+					TxMsg1.Data[3] = TxMsg1.Data[4] = 0xff;//缺省值		
+					memcpy(&TxMsg1.Data[5],&J1939_Multi_Package[5],3);//PGN*/							
+					Can_Send_Msg(CAN1, &TxMsg1);
+				}
+				
+				BMS_Recevie_Flag = 0;
+			}else BMS_Recevie_Flag = 1;
+		
 	}
+
 
 }
 
