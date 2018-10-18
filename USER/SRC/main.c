@@ -78,10 +78,10 @@ void System_Task(void const *argument)
 	}
 }
 
-
+uint32_t kkk = 0;
 //TIMER1_Delay = 500ms调用一次
 static void Timer1_Callback(void const *arg)
-{
+{	kkk++;
 		GPIO_PinWrite(GPIOC,15,!GPIO_PinRead(GPIOC,15));//RUN_LED 500s反转一次
 		IWDG_ReloadCounter();//内部看门狗喂狗！
 		GPIO_PinWrite(GPIOD,2,0);GPIO_PinWrite(GPIOD,2,1);//外部硬件开门狗喂狗！	

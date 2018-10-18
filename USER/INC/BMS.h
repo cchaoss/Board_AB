@@ -9,7 +9,7 @@ enum _BMS_STA
 	SEND_256,
 	SEND_2048,
 	SEND_2560,
-	SEND_4608,
+	SEND_4608 = 4,
 	SEND_6656,
 	SEND_7424,
 	SEND_7936
@@ -21,7 +21,7 @@ enum _rx_bms_sta
 	WAIT_1536_BCP,
 	WAIT_2304_BRO,
 	WAIT_4096_BCL,
-	WAIT_4352_BCS,
+	WAIT_4352_BCS = 5,
 	WAIT_4864_BSM,
 	WAIT_6400_BST,
 	WAIT_7168_BSD,
@@ -72,10 +72,9 @@ typedef struct
 }stuPGN1792Type;
 typedef struct
 {
-	uint16_t OutPutHVolt;  
-	uint16_t OutPutLVolt;
-	uint16_t OutPutHCurr;
-	uint16_t OutPutLCurr;
+	uint16_t OutPutHVolt;	//最高输出电压
+	uint16_t OutPutLVolt;	//最低输出电压
+	uint16_t OutPutHCurr;	//最大输出电流
 }stuPGN2048Type;
 typedef struct
 {
@@ -87,7 +86,7 @@ typedef struct
 	uint16_t OutputCurr;
 	uint16_t ChargingTime;
 	uint16_t AllowCharging;
-}stuPGN4608Type;
+}stuPGN4608Type;//充电机充电状态
 typedef struct
 {
 	uint8_t  ChargStopChargingReason;  //BMS中止充电原因
@@ -117,14 +116,14 @@ typedef struct
 	uint8_t Ver[3];
 	uint8_t BatType;
 	uint16_t RatedCapacity; //额定容量
-  uint16_t RatdeVolt;
-	uint8_t  BatBusinessName[4]; //电池厂商名称
-	uint8_t  BatSerial[4]; //电池组序号
-	uint8_t  BatPrdY;    //电池生产的年份
+  uint16_t RatdeVolt;			//电池额定总电压0-750V
+	uint8_t  BatBusinessName[4];
+	uint8_t  BatSerial[4];
+	uint8_t  BatPrdY;
 	uint8_t  BatPrdM;    
 	uint8_t  BatPrdD;
 	uint8_t  BatChargeCount[3];
-	uint8_t  BatOwmer;  //电池组产权标识
+	uint8_t  BatOwmer;
 	uint8_t  Test;
 	uint8_t  CarVIN[17];//车辆识别码
 	uint8_t  BMSVer[8]; //BMS软件版本号
@@ -133,30 +132,30 @@ typedef struct
 typedef struct 
 {
 	uint16_t SigAllowHightVolt;
-	uint16_t AllowHightCurr;
+	uint16_t AllowHightCurr;	//最高允许充电电流
 	uint16_t RatedCapacity; 
-  uint16_t TotalAllowHightVolt;
+  uint16_t TotalAllowHightVolt;//最高允许充电总电压
 	uint8_t  AllowTemp;
-	uint16_t SOC;
-	uint16_t BatPreVolt;  
+	uint16_t SOC;				//电池组电量状态
+	uint16_t BatPreVolt;//电池组总电压  
 }stuPGN1536Type;//动力蓄电池充电参数报文
 typedef struct 
 {
-	uint8_t BMSSta;
+	uint8_t BMSSta;//0xAA?
 }stuPGN2304Type;//电池充电准备就绪
 typedef struct 
 {
-	uint16_t NeedVolt;
-	uint16_t NeedCurr;
-	uint8_t  ChargingMode;
+	uint16_t NeedVolt;//电压需求
+	uint16_t NeedCurr;//电流需求
+	uint8_t  ChargingMode;//充电模式：1：恒压	2：恒流
 }stuPGN4096Type;//电池充电需求
 typedef struct
 {
-	uint16_t ChargVoltMeas;
-	uint16_t ChargCurrMeas;
+	uint16_t ChargVoltMeas;//充电电压测量值
+	uint16_t ChargCurrMeas;//充电电流测量值
 	uint16_t BatVoltH;
-	uint8_t  PreSOC;
-	uint16_t RemaChargTime;  //估算剩余充电时间
+	uint8_t  PreSOC;			 //当前SOC
+	uint16_t RemaChargTime;//估算剩余充电时间0-600min
 }stuPGN4352Type;//电池充电总状态
 typedef struct
 {

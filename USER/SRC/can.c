@@ -120,7 +120,6 @@ unsigned char Can_Send_Msg(CAN_TypeDef* CANx, CanTxMsg* TxMessage)
 
 
 /**********************************************中断处理*****************************************************/
-unsigned short  k1;
 unsigned char BMS_Recevie_Flag;
 CanRxMsg RxMsg1;
 //CAN_1FIFO中断服务函数			    
@@ -128,7 +127,6 @@ void CAN1_RX0_IRQHandler(void)
 {
 	if(CAN_MessagePending(CAN1,CAN_FIFO0) != 0)
 	{	
-		k1++;
 		BMS_Recevie_Flag = 1;
 		CAN_Receive(CAN1, 0, &RxMsg1);
 	}
