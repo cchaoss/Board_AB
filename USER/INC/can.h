@@ -4,8 +4,9 @@
 #include "GPIO_STM32F10x.h"
 #include "stm32f10x_can.h"
 
-extern CanRxMsg RxMsg1;
-extern volatile unsigned char BMS_Recevie_Flag;
+extern CanRxMsg BMS_RX_0;//多包接受
+extern CanRxMsg BMS_RX_1;
+extern volatile unsigned char BMS_Rx_Flag1;
 
 void BMS_Can_Init(void);
 void ACDC_Module_Can_Init(void);

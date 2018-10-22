@@ -6,27 +6,29 @@
 
 enum _BMS_STA
 {
-	SEND_9728,
-	SEND_256,
-	SEND_2048,
-	SEND_2560,
-	SEND_4608 = 4,
-	SEND_6656,
-	SEND_7424,
-	SEND_7936
+	BEGIN = 0,
+	SEND_9728 = 1,
+	SEND_256  = 2,
+	SEND_2048 = 3,
+	SEND_2560 = 4,
+	SEND_4608 = 5,
+	SEND_6656 = 6,
+	SEND_7424 = 7,
+	TIME_OUT = 8,
 };
 enum _rx_bms_sta
 {
-	WAIT_9984_BHM,
-	WAIT_512_BRM,
-	WAIT_1536_BCP,
-	WAIT_2304_BRO,
-	WAIT_4096_BCL,
-	WAIT_4352_BCS = 5,
-	WAIT_4864_BSM,
-	WAIT_6400_BST,
-	WAIT_7168_BSD,
-	WAIT_7680_BEM
+	WAIT_9984_BHM = 0,
+	WAIT_2304_BRO = 1,
+	WAIT_4096_BCL = 2,
+	WAIT_4864_BSM = 3,
+	WAIT_6400_BST = 4,
+	WAIT_7168_BSD = 5,
+	WAIT_7680_BEM = 6,
+	
+	WAIT_512_BRM  = 7,
+	WAIT_1536_BCP = 8,
+	WAIT_4352_BCS = 9,
 };
 
 //接受BMS报文的数据结构
@@ -128,7 +130,7 @@ typedef struct
 	uint8_t  Test;
 	uint8_t  CarVIN[17];//车辆识别码
 	uint8_t  BMSVer[8]; //BMS软件版本号
-  	
+  char test;
 }stuPGN512Type;//车辆辨识报文
 typedef struct 
 {
@@ -138,7 +140,8 @@ typedef struct
   uint16_t TotalAllowHightVolt;//最高允许充电总电压
 	uint8_t  AllowTemp;
 	uint16_t SOC;				//电池组电量状态
-	uint16_t BatPreVolt;//电池组总电压  
+	uint16_t BatPreVolt;//电池组总电压 
+	char test;
 }stuPGN1536Type;//动力蓄电池充电参数报文
 typedef struct 
 {
@@ -157,6 +160,7 @@ typedef struct
 	uint16_t BatVoltH;
 	uint8_t  PreSOC;			 //当前SOC
 	uint16_t RemaChargTime;//估算剩余充电时间0-600min
+	char test1[5];
 }stuPGN4352Type;//电池充电总状态
 typedef struct
 {
@@ -191,9 +195,8 @@ typedef struct
 }stuPGN7680Type;//BMS错误报文
 #pragma pack()
 
-extern unsigned char J1939_Multi_Package[8];
-extern CanTxMsg TxMsg1;
-static unsigned char BMS_Send(TX_BMS Pbuf);
 
-	
+void Multi_Package_Deal(void);
+static void BMS_Send(TX_BMS Pbuf);
+static void Single_Package_Deal(void);
 #endif

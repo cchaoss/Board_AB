@@ -177,54 +177,59 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>RxMsg1</ItemText>
+          <ItemText>kkk</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>kkk</ItemText>
+          <ItemText>BMS_RX_0</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>RX_BMS_TAB[1].Rx_status</ItemText>
+          <ItemText>BMS_RX_1</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>RX_BMS_TAB[2].Rx_status</ItemText>
+          <ItemText>J1939_Multi_Package</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
           <count>0</count>
           <WinNumber>2</WinNumber>
-          <ItemText>TxMsg1</ItemText>
+          <ItemText>BMS_STA</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>2</WinNumber>
-          <ItemText>BMS_STA</ItemText>
+          <ItemText>Data_4352</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>2</WinNumber>
-          <ItemText>Data_4352</ItemText>
+          <ItemText>Data_1536</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>2</WinNumber>
-          <ItemText>Data_1536</ItemText>
+          <ItemText>RX_BMS_TAB[7].Rx_status</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>2</WinNumber>
-          <ItemText>RX_BMS_TAB[5].Rx_status</ItemText>
+          <ItemText>RX_BMS_TAB[8].Rx_status</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>2</WinNumber>
-          <ItemText>buf</ItemText>
+          <ItemText>RX_BMS_TAB[9].Rx_status</ItemText>
+        </Ww>
+        <Ww>
+          <count>6</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>Data_512</ItemText>
         </Ww>
       </WatchWindow2>
       <Tracepoint>
