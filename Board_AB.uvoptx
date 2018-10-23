@@ -182,17 +182,17 @@
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>BMS_RX_0</ItemText>
+          <ItemText>OUT</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>BMS_RX_1</ItemText>
+          <ItemText>CC</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>J1939_Multi_Package</ItemText>
+          <ItemText>Data_6400</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -230,6 +230,11 @@
           <count>6</count>
           <WinNumber>2</WinNumber>
           <ItemText>Data_512</ItemText>
+        </Ww>
+        <Ww>
+          <count>7</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>Data_4864</ItemText>
         </Ww>
       </WatchWindow2>
       <Tracepoint>

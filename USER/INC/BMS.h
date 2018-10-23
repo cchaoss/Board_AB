@@ -4,6 +4,9 @@
 #include "main.h"
 #include "stm32f10x_can.h"
 
+#define ACDC_MAX_VOL	7500				//750V
+#define ACDC_MIN_VOL	2000				//200V
+#define ACDC_MAX_CUR	(4000-2000)	//200A
 enum _BMS_STA
 {
 	BEGIN = 0,
@@ -104,7 +107,7 @@ typedef struct
 }stuPGN7424Type;
 typedef struct
 {
-	uint8_t IdentifyTimeOut;   //辨识通讯超时
+	uint8_t IdentifyTimeOut;  		//辨识通讯超时
 	uint8_t ChargingParamTimeOut;
 	uint8_t BMSChargingStaTimeOut;
 	uint8_t Summary;//充电统计状态
@@ -164,11 +167,11 @@ typedef struct
 }stuPGN4352Type;//电池充电总状态
 typedef struct
 {
-	uint8_t BatHVoltSerialNumber;
+	uint8_t BatHVNum;
   uint8_t BatHTemp;
-  uint8_t BatHTempSerialNumber;
+  uint8_t BatHTNum;
 	uint8_t BatLTemp;
-  uint8_t BatLTempSerialNumber;
+  uint8_t BatLTNum;
 	uint8_t BatSta;
   uint8_t BatConnetSta;
 }stuPGN4864Type;//动力蓄电池状态信息
@@ -195,8 +198,13 @@ typedef struct
 }stuPGN7680Type;//BMS错误报文
 #pragma pack()
 
+#define Bound(val,max,min) ((val) > (max)? (max) : (val) < (min)? (min) : (val))
 
-void Multi_Package_Deal(void);
+static void ACDC_Start(unsigned short vol,unsigned short cur);
+static void ACDC_Stop(void);
+static void Charge_Close(void);
+static void BMS_Data_Init(void);
 static void BMS_Send(TX_BMS Pbuf);
 static void Single_Package_Deal(void);
+void Multi_Package_Deal(void);
 #endif
