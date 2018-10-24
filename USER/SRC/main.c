@@ -9,18 +9,15 @@ osThreadId	BMS_Task_ID;
 osThreadId	ACDC_Module_Task_ID;
 
 //线程定义结构体:任务名、优先级、缺省、任务栈空间（byte）
-osThreadDef(System_Task, 	osPriorityHigh, 1, 400);
-osThreadDef(BMS_Task, 		osPriorityHigh, 1, 800); 
-osThreadDef(ACDC_Module_Task, osPriorityNormal, 1, 400); 
-
+osThreadDef(System_Task, 	osPriorityHigh, 1, 300);
+osThreadDef(BMS_Task, 		osPriorityHigh, 1, 300); 
+osThreadDef(ACDC_Module_Task, osPriorityNormal, 1, 300); 
 
 //软定时器ID
 osTimerId TIMER1_ID;
 #define TIMER1_Delay	500U//ms
 //软定时器结构体：定时器名、对应的回调函数
 osTimerDef (Timer1, Timer1_Callback);   
-
-
 
 
 //note:Reload <=4095
@@ -77,6 +74,7 @@ void System_Task(void const *argument)
 		osDelay(System_Task_Time);
 	}
 }
+
 
 uint32_t kkk = 0;
 //TIMER1_Delay = 500ms调用一次

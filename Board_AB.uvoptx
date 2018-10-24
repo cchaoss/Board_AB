@@ -194,6 +194,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>Data_6400</ItemText>
         </Ww>
+        <Ww>
+          <count>4</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>g</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>gg</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
@@ -235,6 +245,11 @@
           <count>7</count>
           <WinNumber>2</WinNumber>
           <ItemText>Data_4864</ItemText>
+        </Ww>
+        <Ww>
+          <count>8</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>RX_BMS_TAB[4].Rx_status</ItemText>
         </Ww>
       </WatchWindow2>
       <Tracepoint>
@@ -320,7 +335,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>3</FileNumber>
       <FileType>1</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <Focus>0</Focus>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
