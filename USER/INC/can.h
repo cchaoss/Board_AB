@@ -4,13 +4,20 @@
 #include "GPIO_STM32F10x.h"
 #include "stm32f10x_can.h"
 
+typedef struct
+{
+	char	BMS_Rx_Flag1:1;
+	char  ACDC_Rx_Flag:1;
+	char 	ABC_Data_Rx_Flag:1;
+	char	reserved:5;
+}Can_Rx_FlagBits;
+extern Can_Rx_FlagBits	RX_Flag;//CAN接受报文分类标记
 extern CanRxMsg BMS_RX_0;//多包接受
-extern CanRxMsg BMS_RX_1;
-extern volatile unsigned char BMS_Rx_Flag1;
+extern CanRxMsg BMS_RX_1;//单包接受
+extern CanRxMsg ADCD_RX;//充电模块应答接受
+
 
 void BMS_Can_Init(void);
 void ACDC_Module_Can_Init(void);
-
-unsigned char Can_Send_Msg(CAN_TypeDef* CANx, CanTxMsg* TxMessage);
 
 #endif

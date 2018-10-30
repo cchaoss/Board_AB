@@ -6,7 +6,7 @@
 
 #define ACDC_MAX_VOL	7500				//750V
 #define ACDC_MIN_VOL	2000				//200V
-#define ACDC_MAX_CUR	(4000-2500)	//250A
+#define ACDC_MAX_CUR	(4000-3000)	//300A
 enum _BMS_STA
 {
 	BEGIN = 0,
@@ -20,7 +20,7 @@ enum _BMS_STA
 	TIME_OUT = 8,
 	STOP = 9,
 };
-enum _rx_bms_sta
+enum _bms_rx_num
 {
 	WAIT_9984_BHM = 0,
 	WAIT_2304_BRO = 1,
@@ -201,8 +201,7 @@ typedef struct
 
 #define Bound(val,max,min) ((val) > (max)? (max) : (val) < (min)? (min) : (val))
 
-static void ACDC_Start(float vol, float cur);
-static void ACDC_Stop(void);
+static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void Charge_Close(void);
 static void BMS_Data_Init(void);
 static void BMS_Send(TX_BMS Pbuf);
