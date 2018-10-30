@@ -169,9 +169,7 @@ void BMS_Task(void const *argument)
 //				if(t == 1)	BMS_Send(CSD_7424);
 //				if((t>20)||(0))//delay20*10ms(或者电流5A以下)-保护继电器寿命
 //				{
-//					Charge_Close();
-//					t = timeout = 0;
-//					BMS_STA = BEGIN;
+//					Charge_Close();	t = timeout = 0;	BMS_STA = BEGIN;
 //				}//跳过接受7168BMS统计数据报文										
 //			}break;
 			case TIME_OUT://超时重连处理

@@ -10,7 +10,6 @@ enum _ACDC_STA
 	Read_Status	= 2,
 	Read_Vol_Cur= 3,
 	Set_Vol_Cur = 4,
-	Set_ON_OFF  = 5,
 };
 typedef struct
 {

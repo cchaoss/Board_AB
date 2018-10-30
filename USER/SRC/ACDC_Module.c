@@ -2,7 +2,6 @@
 #include "can.h"
 #include "acdc_module.h"
        
-
 uint8_t ACDC_VolCur_Buffer[8];
 ACDC_Status Module_Status;//µçÔ´Ä£¿éµÄ¸öÊı ÎÂ¶È ×´Ì¬ µçÑ¹µçÁ÷		 
 Module_Rx_Flag_Bits	Module_Rx_Flag;//µçÔ´Ä£¿é±¨ÎÄ½ÓÊÕ±ê¼Ç
@@ -11,7 +10,7 @@ CanTxMsg TxMsg_ACDC = {0, 0, CAN_Id_Extended, CAN_RTR_Data, 8, {0}};//À©Õ¹Ö¡ Êı¾
 unsigned char ACDC_STA = Set_Group;
 void ACDC_Module_Task(void const *argument)
 {
-	const unsigned short ACDC_Module_Task_Time = 110U;
+	const unsigned short ACDC_Module_Task_Time = 125U;
 	static unsigned char number,module_init_time;
 	Module_Rx_Flag.ON_OFF_STA = true;
 	while(1)
@@ -24,28 +23,16 @@ void ACDC_Module_Task(void const *argument)
 			{
 				if(Module_Rx_Flag.All_num&&(Module_Status.num>0))//¶ÁÈ¡Ä£¿é×ÜÊı³É¹¦&&Ä£¿éÊıÁ¿>0
 				{	
-					Module_Rx_Flag.All_num = false;	number = 0;	ACDC_STA = Group_Verify;
-//					if(Board_Type == 0x0A)//A°å
-//					{
-//						TxMsg_ACDC.ExtId = Set_Single_Module_Group|(number<<8);
-//						TxMsg_ACDC.Data[0] = 0x0A;//0-7ÉèÖÃÎªA×é
-//					}
-//					if(Board_Type == 0x0B)
-//					{
-//						TxMsg_ACDC.ExtId = Set_Single_Module_Group|((number+MAX_GROUP_NUM)<<8);//MAX_GROUP_NUM 8
-//						TxMsg_ACDC.Data[0] = 0x0B;//8-15ÉèÖÃÎªB×é
-//					}		
-//					CAN_Transmit(CAN2, &TxMsg_ACDC);
-//					if(++number==MAX_GROUP_NUM)	{Module_Rx_Flag.All_num = false;	number = 0;	ACDC_STA = Group_Verify;}					
+					Module_Rx_Flag.All_num = false;	number = 0;	ACDC_STA = Group_Verify;			
 				}
-				else	//if(++module_init_time > 11000/ACDC_Module_Task_Time)//ÉÏµç11sµÈ´ıÄ£¿éÓ²¼ş³õÊ¼»¯Íê³É
+				else	if(++module_init_time > 10000/ACDC_Module_Task_Time)//ÉÏµç10sµÈ´ıÄ£¿éÓ²¼ş³õÊ¼»¯Íê³É
 				{	
 					module_init_time = 11000/ACDC_Module_Task_Time + 1;
 					TxMsg_ACDC.ExtId = Total_Number_Read;//¶ÁÈ¡Ä£¿é×ÜÊı
-					memset(TxMsg_ACDC.Data,0,8);
-					CAN_Transmit(CAN2, &TxMsg_ACDC);		
+					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);		
 				}
 			}break;
+			
 			case Group_Verify://¶ÁÈ¡¸÷×éÄ£¿éÊıÁ¿£¬È·ÈÏÃ¿¸ö×éÖÁÉÙÓĞÒ»¸öÄ£¿é
 			{
 				if(Board_Type == 0x0A)
@@ -55,13 +42,8 @@ void ACDC_Module_Task(void const *argument)
 						Module_Rx_Flag.A_num = false;
 						if(Module_Status.numA > 0)	ACDC_STA = Read_Status;//ÖÁÉÙÓĞÒ»¸öÄ£¿é¾Í¿ÉÒÔÕı³£¹¤×÷
 							else ACDC_STA = Set_Group;//ÖØĞÂÉèÖÃ×éºÅ
-//TxMsg_ACDC.ExtId = 0x029401F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//ÉèÖÃÄ£¿é1ÂÌµÆÉÁË¸
 					}
-					else
-					{
-						TxMsg_ACDC.ExtId = GroupA_Number_Read;//¶ÁÈ¡A×éÄ£¿éÊıÁ¿
-						CAN_Transmit(CAN2, &TxMsg_ACDC);
-					}	
+					else{TxMsg_ACDC.ExtId = GroupA_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//¶ÁÈ¡A×éÄ£¿éÊıÁ¿
 				}
 				else if(Board_Type == 0x0B)//B°å
 				{
@@ -71,53 +53,42 @@ void ACDC_Module_Task(void const *argument)
 						if(Module_Status.numB>0)	ACDC_STA = Read_Status;//ÖÁÉÙÓĞÒ»¸öÄ£¿é¾Í¿ÉÒÔÕı³£¹¤×÷
 							else ACDC_STA = Set_Group;//ÖØĞÂÉèÖÃ×éºÅ
 					}
-					else
-					{
-						TxMsg_ACDC.ExtId = GroupB_Number_Read;//¶ÁÈ¡A×éÄ£¿éÊıÁ¿
-						CAN_Transmit(CAN2, &TxMsg_ACDC);
-					}	
+					else{TxMsg_ACDC.ExtId = GroupB_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//¶ÁÈ¡A×éÄ£¿éÊıÁ¿	
 				}
 			}break;
+			
 			case Read_Status://¶ÁÈ¡Ä£¿é×´Ì¬
 			{	
-				if(Board_Type == 0x0A)	
+				if(Board_Type == 0x0A)//A°å×Ó¸ºÔğÂÖÑ¯ËùÓĞÄ£¿é×´Ì¬ ÎÂ¶ÈĞÅÏ¢
 				{	
-					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//¶ÁÈ¡Ä£¿é×´Ì¬/ÎÂ¶È/×éºÅ(A×éÄ£¿éµØÖ·£º0-7)
-					if(++number==Module_Status.numA+1)	number = 0;
+					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//¶ÁÈ¡Ä£¿é×´Ì¬/ÎÂ¶È/×éºÅ
+					if(++number==Module_Status.num)	number = 0;
+					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
 				}
-				else if(Board_Type == 0x0B)	
-				{
-					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|((number+MAX_GROUP_NUM)<<8);//¶ÁÈ¡Ä£¿é×´Ì¬/ÎÂ¶È/×éºÅ(B×éÄ£¿éµØÖ·£º8-15)
-					if(++number==Module_Status.numB)	number = 0;
-				}
-				memset(TxMsg_ACDC.Data,0,8);
-				CAN_Transmit(CAN2, &TxMsg_ACDC);	
 				ACDC_STA =	Read_Vol_Cur;
-				//if(Module_Rx_Flag.Temp_sta == true);//ÅĞ¶ÏÄ£¿é×´Ì¬ÊÇ·ñÕı³££¬×ö½µ¶î¹Ø»ú´¦Àí	
 			}break;
+			
 			case Read_Vol_Cur:
 			{	
 				if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Vol_Cur_Read;//¶ÁÈ¡A×éµçÑ¹µçÁ÷
-				else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Vol_Cur_Read;//¶ÁÈ¡A×éµçÑ¹µçÁ÷	
-				memset(TxMsg_ACDC.Data,0,8);
-				CAN_Transmit(CAN2, &TxMsg_ACDC);
+				else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Vol_Cur_Read;//¶ÁÈ¡B×éµçÑ¹µçÁ÷	
+				memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
 				ACDC_STA =	Set_Vol_Cur;
 			}break;
+			
 			case Set_Vol_Cur://ÉèÖÃµçÑ¹µçÁ÷ ¿ª¹Ø»ú
 			{
-				if((ACDC_VolCur_Buffer[3] != 0)&&(ACDC_VolCur_Buffer[7] != 0))
+				if(ACDC_VolCur_Buffer[7] != 0)//µçÁ÷²»Îª0
 				{
 					if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = Set_GroupA_Vol_Cur;
 					else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = Set_GroupB_Vol_Cur;
-					memcpy(TxMsg_ACDC.Data,ACDC_VolCur_Buffer,8);
-					CAN_Transmit(CAN2, &TxMsg_ACDC);
+					memcpy(TxMsg_ACDC.Data,ACDC_VolCur_Buffer,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
 					if(Module_Rx_Flag.ON_OFF_STA)//¿ª»úÒ»´Î
 					{
 						Module_Rx_Flag.ON_OFF_STA = false;
 						if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;
 						else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;
-						memset(TxMsg_ACDC.Data,0,8);//0Îª¿ª»ú
-						CAN_Transmit(CAN2, &TxMsg_ACDC);
+						memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);//0Îª¿ª»ú
 					}
 				}
 				else//µçÑ¹µçÁ÷Îª0ÔòÖ´ĞĞ¹Ø»ú
@@ -128,8 +99,7 @@ void ACDC_Module_Task(void const *argument)
 						if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;
 						else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;
 						memset(TxMsg_ACDC.Data,0,8);					
-						TxMsg_ACDC.Data[0] = 1;	//1Îª¹Ø»ú
-						CAN_Transmit(CAN2, &TxMsg_ACDC);
+						TxMsg_ACDC.Data[0] = 1;	CAN_Transmit(CAN2, &TxMsg_ACDC);//1Îª¹Ø»ú
 					}
 				}
 				ACDC_STA =	Read_Status;
@@ -139,6 +109,7 @@ void ACDC_Module_Task(void const *argument)
 		osDelay(ACDC_Module_Task_Time);
 	}
 }
+
 
 sta_ack_type	Module_Sta_Ack_type;
 static void ACDC_RxMsg_Deal(void)
@@ -152,14 +123,17 @@ static void ACDC_RxMsg_Deal(void)
 			if((ADCD_RX.ExtId == Total_Vol_Cur_Ack)||(ADCD_RX.ExtId == GroupA_Vol_Cur_Ack))//¶ÁÈ¡Ä£¿éÊä³öµçÑ¹×ÜµçÁ÷//ËùÓĞÄ£¿é|A×é
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
-				for(char i = 0;i < 4;i++)//IEEE-754µ¥¾«¶È¸¡µãÒª°ÑÊı¾İµ¹¹ıÀ´
-				{
-					*V++ = ADCD_RX.Data[3-i];
-					*C++ = ADCD_RX.Data[7-i];
-				}
+				for(char i = 0;i < 4;i++)	{*V++ = ADCD_RX.Data[3-i];	*C++ = ADCD_RX.Data[7-i];}//IEEE-754µ¥¾«¶È¸¡µãÒª°ÑÊı¾İµ¹¹ıÀ´
 			}
-			if((ADCD_RX.ExtId >= Single_Module_Sta_Ack)&&(ADCD_RX.ExtId <= Single_Module_Sta_Ack+7))	
+			if((ADCD_RX.ExtId >= Single_Module_Sta_Ack)&&(ADCD_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
+			{
 				memcpy(&Module_Sta_Ack_type.group,&ADCD_RX.Data[2],6);//¶ÁÈ¡0-7ºÅÄ£¿é×éºÅ ÎÂ¶È ×´Ì¬
+//				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//ÅĞ¶ÏÄ£¿é×´Ì¬ÊÇ·ñÕı³£
+//				{
+						//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//ÉèÖÃÄ£¿é0ÂÌµÆÉÁË¸
+//					TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//ÉèÖÃ¶ÔÓ¦Ä£¿éÂÌµÆÉÁË¸,ºÎÊ±È¡ÏûÉÁË¸£¿
+//				}
+			}
 		}
 		else if(Board_Type == 0x0B)
 		{
@@ -167,14 +141,8 @@ static void ACDC_RxMsg_Deal(void)
 			if((ADCD_RX.ExtId == Total_Vol_Cur_Ack)||(ADCD_RX.ExtId == GroupB_Vol_Cur_Ack))//¶ÁÈ¡Ä£¿éÊä³öµçÑ¹×ÜµçÁ÷//ËùÓĞÄ£¿é|B×é
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
-				for(char i = 0;i < 4;i++)//IEEE-754µ¥¾«¶È¸¡µãÒª°ÑÊı¾İµ¹¹ıÀ´
-				{
-					*V++ = ADCD_RX.Data[3-i];
-					*C++ = ADCD_RX.Data[7-i];
-				}
+				for(char i = 0;i < 4;i++)	{*V++ = ADCD_RX.Data[3-i];	*C++ = ADCD_RX.Data[7-i];}//IEEE-754µ¥¾«¶È¸¡µãÒª°ÑÊı¾İµ¹¹ıÀ´
 			}
-			if((ADCD_RX.ExtId >= Single_Module_Sta_Ack+8)&&(ADCD_RX.ExtId <= Single_Module_Sta_Ack+15))	
-				memcpy(&Module_Sta_Ack_type.group,&ADCD_RX.Data[2],6);//¶ÁÈ¡8-15ºÅÄ£¿é×éºÅ ÎÂ¶È ×´Ì¬	
 		}		
 		RX_Flag.ACDC_Rx_Flag = false;
 	}
