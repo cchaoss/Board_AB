@@ -96,9 +96,9 @@ typedef struct
 }stuPGN4608Type;//充电机充电状态
 typedef struct
 {
-	uint8_t  ChargStopChargingReason;  //BMS中止充电原因
-	uint16_t ChargFaultReason;         //BMS中止充电故障原因
-  uint8_t	 ChargErrorReason;         //BMS中止充电错误原因
+	uint8_t  ChargStopChargingReason;  //桩中止充电原因
+	uint16_t ChargFaultReason;         //桩中止充电故障原因
+  uint8_t	 ChargErrorReason;         //桩中止充电错误原因
 }stuPGN6656Type;
 typedef struct
 {
@@ -201,6 +201,17 @@ typedef struct
 
 #define Bound(val,max,min) ((val) > (max)? (max) : (val) < (min)? (min) : (val))
 
+enum _guzhang
+{
+	OK,
+	Lock_ERR,
+	Gun_Vol_ERR,
+	Insulation_ERR,
+	Tap_Check_ERR,
+	Bat_Vol_ERR,
+};
+
+extern unsigned char guzhang;
 static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void Charge_Close(void);
 static void BMS_Data_Init(void);

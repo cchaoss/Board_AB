@@ -45,7 +45,8 @@ TX_BMS CST_6656 = {(6656>>8),		4,		 0xf4,		 0x56,		 4,					10,				&Data_6656};//
 TX_BMS CSD_7424 = {(7424>>8),		6,		 0xf4,		 0x56,		 8,					250,			&Data_7424};//³äµç»úÍ³¼ÆÊý¾Ý
 TX_BMS CEM_7936 = {(7936>>8),		2,		 0xf4,		 0x56,		 4,					250,			&Data_7936};//³äµç»ú´íÎó±¨ÎÄ
 float CC = 12;
-unsigned char OUT,	BMS_STA = BEGIN,g,gg;
+unsigned char guzhang;
+unsigned char OUT,	BMS_STA = BEGIN;
 void BMS_Task(void const *argument)
 {
 	const unsigned char BMS_Task_Time = 25U;//10msÑ­»·
@@ -61,7 +62,7 @@ void BMS_Task(void const *argument)
 			case BEGIN://²åÇÀ×¼±¸
 			{	//Ç°Ìá£º³äµç»ú×ÔÉí×´Ì¬Õý³£
 				//CCÐÅºÅÊÇ·ñ3.2v-4.8v
-				//ÉÏËø£¬ÉÏËø·´À¡¾ÍÐ÷£¿
+				//ÉÏËø£¬ÉÏËø·´À¡¾ÍÐ÷£¿//³¬Ê±5sËøÎ´ËøºÃ->½áÊø³äµçÐèÒªÔÙ´Î°ÎÇ¹	guzhang = Lock_ERR;
 				//¸¨ÖúµçÔ´¼ÌµçÆ÷±ÕºÏK3K4
 				//¶¼okµÄ»°->{Ïà¹Ø±êÖ¾Î»Çå0£¬BMS_STA = SEND_9728;}//±¨ÎÄ½ÓÊÕ±êÖ¾Çå0
 				if((CC>3)&&(CC<5))
@@ -79,11 +80,10 @@ void BMS_Task(void const *argument)
 				if(t == 1)	{timeout++;	BMS_Send(CHM_9728);}		
 				if((RX_BMS_TAB[WAIT_9984_BHM].Rx_status == 1)||(timeout > 20))//ÊÕµ½9984||³¬Ê±5s->GB2015
 				{
-					//if(k1k2½Ó´¥Æ÷µçÑ¹<10V)
-					//if(¾øÔµ¼à²âok£¿)//ÐèÒªµçÑ¹Ä£¿éÊä³öµçÑ¹
-					//if(Ð¹·ÅµçÂ·¼ì²éok£¿)
-					t = timeout = 0;
-					BMS_STA = SEND_256;
+					//if(k1k2½Ó´¥Æ÷µçÑ¹<10V)//guzhang = Gun_Vol_ERR;//½Ó´¥Æ÷Íâ²àµçÑ¹>10V//ÐèÒªÖØÐÂ°ÎÇ¹
+					//if(¾øÔµ¼à²âok£¿)//ÐèÒªµçÑ¹Ä£¿éÊä³öµçÑ¹//guzhang = Insulation_ERR;//¾øÔµ¼ì²é´íÎó//Í£ÓÃ±¾×®
+					//if(Ð¹·ÅµçÂ·¼ì²éok£¿)//guzhang = Tap_Check_ERR;//Ð¹·Å¼ì²é´íÎó//Í£ÓÃ±¾×®
+					t=timeout=0;	BMS_STA = SEND_256;
 				}
 			}break;	
 			case SEND_256://³äµç±æÊ¶
@@ -112,9 +112,9 @@ void BMS_Task(void const *argument)
 			{
 				t = (t+1)%(CRO_2560.Period/BMS_Task_Time);
 				if(t == 1)	{timeout++;	BMS_Send(CRO_2560);}
-				//ÅÐ¶ÏÇ¹µçÑ¹Óë±¨ÎÄµç³ØµçÑ¹Ïà²î5%ÒÔÄÚ£¬ÔÚ³äµç»ú×î´ó×îÐ¡µçÑ¹Ö®¼ä
-				//µ÷ÕûµçÔ´Ä£¿éÊä³öµçÑ¹¸ßÓÚµç³ØµçÑ¹1-10vºó£   5.5v ACDC_Set_Vol_Cur(float vol,float cur);
-				//±ÕºÏ¼ÌµçÆ÷K1K2
+				//if(Data_1536.BatPreVolt)ÅÐ¶ÏÇ¹µçÑ¹Óë±¨ÎÄµç³ØµçÑ¹Ïà²î5%ÒÔÄÚ£¬ÔÚ³äµç»ú×î´ó×îÐ¡µçÑ¹Ö®¼ä//guzhang = Bat_Vol_ERR;//ÐèÒªÔÙ´Î°ÎÇ¹
+				//µ÷ÕûµçÔ´Ä£¿éÊä³öµçÑ¹¸ßÓÚµç³ØµçÑ¹1-10v OK?  ACDC_Set_Vol_Cur(Data_1536.BatPreVolt+5.5f,0);
+				//if(Module_Status.Output_Vol*10>Data_1536.BatPreVolt+1)//±ÕºÏ¼ÌµçÆ÷K1K2
 				if(1)	Data_2560.PrepareOK = 0xAA;
 				if((RX_BMS_TAB[WAIT_4352_BCS].Rx_status==1)&&(RX_BMS_TAB[WAIT_4096_BCL].Rx_status==1))	{t=timeout=0;	BMS_STA = SEND_4608;}
 					else if(timeout>20)	{t=timeout=0;	BMS_STA=TIME_OUT;	Data_7936.BMSChargingStaTimeOut|=0x05;}//4096µç³Ø³äµçÐèÇó³¬Ê±5s 4352µç³Ø³äµç×Ü×´Ì¬±¨ÎÄ³¬5s(¹²Éú¹²ËÀ)
@@ -122,17 +122,17 @@ void BMS_Task(void const *argument)
 			case SEND_4608:/*³äµç»ú³äµç×´Ì¬(³äµç½×¶Î)*/
 			{
 				OUT = 0;//Í¨Ñ¶³¬Ê±ÖØÁ¬´ÎÊýÇåÁã£ºµ½³äµç½×¶ÎËµÃ÷ËùÓÐ±¨ÎÄ¶¼ÊÕµ½Ò»±é
-				//if(³äµç»ú¹ÊÕÏ){BMS_Send(CST_6656);	t=timeout=0;	BMS_STA = STOP;}
-				
-				Data_4608.OutputVolt = Module_Status.Output_Vol*10;//Data_4096.NeedVolt-10;//Êµ¼ÊÊ¹ÓÃÄÃACDCÄ£¿éÊý¾Ý
-				Data_4608.OutputCurr = 4000-Module_Status.Output_Cur*10;//Data_4096.NeedCurr+10;//²âÊÔÓÃ
+				//if(³äµç»ú¹ÊÕÏ){Data_6656.ChargStopChargingReason|=0x10;	Data_6656.ChargFaultReason = ¹ÊÕÏÔ­Òò;	BMS_Send(CST_6656);	t=timeout=0;	BMS_STA = STOP;}//³äµç»ú¹ÊÕÏÍ£Ö¹
+				//if(¼±Í£)->{Data_6656.ChargStopChargingReason|=0x04;	t=timeout=0;	BMS_STA = SEND_6656;}//ÈË¹¤Í£Ö¹
+				Data_4608.OutputVolt = Module_Status.Output_Vol*10;
+				Data_4608.OutputCurr = 4000-Module_Status.Output_Cur*10;
 				Data_4608.ChargingTime++;
 				
 				t = (t+1)%(CCS_4608.Period/BMS_Task_Time);
 				if(t == 1)	{timeout++;timeout1++;	BMS_Send(CCS_4608);}
 				
-				if((RX_BMS_TAB[WAIT_4096_BCL].Rx_status==0)&&(timeout>4))	{t=timeout=0;	BMS_STA=TIME_OUT;	Data_7936.BMSChargingStaTimeOut|=0x04;}//½ÓÊÜ4096µç³Ø³äµçÐèÇó³¬Ê±1s
-				if((RX_BMS_TAB[WAIT_4352_BCS].Rx_status==0)&&(timeout1>20)){t=timeout=0;	BMS_STA=TIME_OUT;	Data_7936.BMSChargingStaTimeOut|=0x01;}//4352µç³Ø³äµç×Ü×´Ì¬±¨ÎÄ³¬5s
+				if((RX_BMS_TAB[WAIT_4096_BCL].Rx_status==0)&&(timeout>4))		{t=timeout=0;	BMS_STA=TIME_OUT;	Data_7936.BMSChargingStaTimeOut|=0x04;}//½ÓÊÜ4096µç³Ø³äµçÐèÇó³¬Ê±1s
+				if((RX_BMS_TAB[WAIT_4352_BCS].Rx_status==0)&&(timeout1>20))	{t=timeout=0;	BMS_STA=TIME_OUT;	Data_7936.BMSChargingStaTimeOut|=0x01;}//4352µç³Ø³äµç×Ü×´Ì¬±¨ÎÄ³¬5s
 				
 				if(RX_BMS_TAB[WAIT_4096_BCL].Rx_status==1)	{timeout = 0;	RX_BMS_TAB[WAIT_4096_BCL].Rx_status = 0;}
 				if(RX_BMS_TAB[WAIT_4352_BCS].Rx_status==1)	{timeout1= 0;	RX_BMS_TAB[WAIT_4352_BCS].Rx_status = 0;}
@@ -143,13 +143,11 @@ void BMS_Task(void const *argument)
 					if((Data_4864.BatSta==0)&&((Data_4864.BatConnetSta&0x0f)==0))//µç³Ø×´Ì¬Î»¶¼Õý³£
 					{
 						if(Data_4864.BatConnetSta&0x10)	
-							ACDC_Set_Vol_Cur(Data_4096.NeedVolt,4000-Data_4096.NeedCurr);//ÔÊÐí³äµçbound´«²ÎÊý×¢ÒâBMSµçÑ¹µçÁ÷¸ñÊ½¸úacdcÄ£¿éÊý¾Ý¸ñÊ½µÄÇø±ð
-						else	ACDC_Set_Vol_Cur(0,0);//½ûÖ¹³äµç->³äµçÔÝÍ££¬¼ÌÐø½ÓÊÜÅÐ¶Ï4864BSMµç³Ø×´Ì¬ÊÇ·ñÕý³££		
+							ACDC_Set_Vol_Cur(Data_4096.NeedVolt,4000-Data_4096.NeedCurr);//ÔÊÐí³äµç
+						else	ACDC_Set_Vol_Cur(0,0);//³äµçÔÝÍ£	
 					}else{t = timeout = 0;	BMS_STA = SEND_6656;}//µç³ØÒì³£Í£Ö¹³äµç
-				}
-
-				//¼±Í££¿->{t = timeout = 0;	BMS_STA = SEND_6656;}
-				if(RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)	{t = timeout = 0;	BMS_STA = STOP;}//ÊÕµ½BMSÖÐÖ¹³äµç
+				}	
+				if(RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)	{Data_6656.ChargStopChargingReason|=0x40;	t = timeout = 0;	BMS_STA = STOP;}//ÊÕµ½BMSÖÐÖ¹³äµç
 			}break;
 			case SEND_6656://³äµç»úÖÐÖ¹³äµç
 			{
@@ -180,7 +178,7 @@ void BMS_Task(void const *argument)
 					if(t == 1)	
 					{
 						BMS_Send(CEM_7936);//·¢ËÍ³äµç»ú´íÎó±¨ÎÄ
-						ACDC_Set_Vol_Cur(0,0);			 //µçÁ¦Êä³öÍ£Ö¹²Ù×÷
+						ACDC_Set_Vol_Cur(0,0);//µçÁ¦Êä³öÍ£Ö¹²Ù×÷
 					}	
 					if((t>200/BMS_Task_Time)||(0))//delay200ms(»òÕßµçÁ÷5AÒÔÏÂ)-±£»¤¼ÌµçÆ÷ÊÙÃü
 					{	//¶Ï¿ªK1K2
@@ -284,10 +282,9 @@ void Multi_Package_Deal(void)
 }
 
 
-
 static void ACDC_Set_Vol_Cur(short vol,	short cur)
 {
-	int V = Bound(vol,ACDC_MAX_VOL,ACDC_MIN_VOL)*100;//200-700V
+	int V = Bound(vol,ACDC_MAX_VOL,0)*100;//0-700V
 	int C = Bound(cur,4000-ACDC_MAX_CUR,0)*100;//0-300V
 	ACDC_VolCur_Buffer[0] = V>>24;
 	ACDC_VolCur_Buffer[1] = V>>16;

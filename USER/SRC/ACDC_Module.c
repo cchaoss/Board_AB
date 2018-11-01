@@ -78,7 +78,7 @@ void ACDC_Module_Task(void const *argument)
 			
 			case Set_Vol_Cur://设置电压电流 开关机
 			{
-				if(ACDC_VolCur_Buffer[7] != 0)//电流不为0
+				if(ACDC_VolCur_Buffer[3] != 0)//电压不为0
 				{
 					if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = Set_GroupA_Vol_Cur;
 					else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = Set_GroupB_Vol_Cur;
@@ -91,7 +91,7 @@ void ACDC_Module_Task(void const *argument)
 						memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);//0为开机
 					}
 				}
-				else//电压电流为0则执行关机
+				else//电压为0则执行关机
 				{
 					if(!Module_Rx_Flag.ON_OFF_STA)//开过机才关机
 					{
