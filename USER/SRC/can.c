@@ -154,16 +154,22 @@ void CAN1_RX1_IRQHandler(void)
 }
 
 /*******************************************ACDC中断处理************************************************/
-CanRxMsg ADCD_RX;	    
+CanRxMsg ACDC_RX;	    
 void CAN2_RX0_IRQHandler(void)
 {
-  CAN_Receive(CAN2, CAN_FIFO0, &ADCD_RX);
+  CAN_Receive(CAN2, CAN_FIFO0, &ACDC_RX);
 	RX_Flag.ACDC_Rx_Flag = true;
 }
 /*******************************************AB——C板通讯***********************************************/
-//CanRxMsg ABC_DATA_RX;
-//void CAN2_RX1_IRQHandler(void)
-//{
-//  CAN_Receive(CAN2, CAN_FIFO1, &ABC_DATA_RX);
-//}
+CanRxMsg ABC_DATA_RX;
+void CAN2_RX1_IRQHandler(void)
+{
+  CAN_Receive(CAN2, CAN_FIFO1, &ABC_DATA_RX);
+	if((ABC_DATA_RX.ExtId==0xB0000ABC)||(ABC_DATA_RX.ExtId==0xA0000ABC))//检查A/B板状态报文
+	{
+		if(ABC_DATA_RX.Data[0] == 0x01)//急停按下
+		;
+	}
+	else	RX_Flag.ABC_Data_Rx_Flag = true;
+}
 

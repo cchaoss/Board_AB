@@ -11,3 +11,5 @@ JLinkSettings.ini
 *.dep
 *.bak
 *.uvgui.*
+/*.uvoptx
+/*.Administrator

@@ -14,7 +14,8 @@ typedef struct
 extern Can_Rx_FlagBits	RX_Flag;//CAN接受报文分类标记
 extern CanRxMsg BMS_RX_0;//多包接受
 extern CanRxMsg BMS_RX_1;//单包接受
-extern CanRxMsg ADCD_RX;//充电模块应答接受
+extern CanRxMsg ACDC_RX;//充电模块应答接受
+extern CanRxMsg ABC_DATA_RX;
 
 
 void BMS_Can_Init(void);

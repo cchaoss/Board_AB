@@ -49,7 +49,7 @@ static void Bsp_init(void)
 
 int main(void)
 {
-		
+	//system_stm32f10x.c 1036行修改晶振配置
 	Bsp_init();//初始化设备	
 	osKernelInitialize();	//初始化RTX系统
 	
@@ -68,10 +68,17 @@ int main(void)
 
 void System_Task(void const *argument)
 {
-	const unsigned short System_Task_Time = 20U;
+	const unsigned short System_Task_Time = 50U;
 	while(1)
 	{
-		
+		if(RX_Flag.ABC_Data_Rx_Flag)
+		{
+			RX_Flag.ABC_Data_Rx_Flag = false;
+			if(ABC_DATA_RX.ExtId==0xC0000ABC)//充电启停，模块分配
+				;
+			if(ABC_DATA_RX.ExtId==0xC1000ABC)//参数设置
+				;
+		}
 		
 		osDelay(System_Task_Time);
 	}

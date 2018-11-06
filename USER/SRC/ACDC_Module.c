@@ -27,7 +27,7 @@ void ACDC_Module_Task(void const *argument)
 				}
 				else	if(++module_init_time > 10000/ACDC_Module_Task_Time)//上电10s等待模块硬件初始化完成
 				{	
-					module_init_time = 11000/ACDC_Module_Task_Time + 1;
+					module_init_time = 10000/ACDC_Module_Task_Time + 1;
 					TxMsg_ACDC.ExtId = Total_Number_Read;//读取模块总数
 					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);		
 				}
@@ -93,7 +93,7 @@ void ACDC_Module_Task(void const *argument)
 				}
 				else//电压为0则执行关机
 				{
-					if(!Module_Rx_Flag.ON_OFF_STA)//开过机才关机
+					if(!Module_Rx_Flag.ON_OFF_STA)//开过机才关机一次
 					{
 						Module_Rx_Flag.ON_OFF_STA = true;
 						if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;
@@ -116,18 +116,18 @@ static void ACDC_RxMsg_Deal(void)
 {
 	if(RX_Flag.ACDC_Rx_Flag)
 	{	
-		if(ADCD_RX.ExtId == Total_Number_Ack)	{Module_Rx_Flag.All_num = true;	Module_Status.num = ADCD_RX.Data[2];}		
+		if(ACDC_RX.ExtId == Total_Number_Ack)	{Module_Rx_Flag.All_num = true;	Module_Status.num = ACDC_RX.Data[2];}		
 		if(Board_Type == 0x0A)
 		{			
-			if(ADCD_RX.ExtId == GroupA_Number_Ack)	{Module_Rx_Flag.A_num = true;	Module_Status.numA = ADCD_RX.Data[2];}
-			if((ADCD_RX.ExtId == Total_Vol_Cur_Ack)||(ADCD_RX.ExtId == GroupA_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|A组
+			if(ACDC_RX.ExtId == GroupA_Number_Ack)	{Module_Rx_Flag.A_num = true;	Module_Status.numA = ACDC_RX.Data[2];}
+			if((ACDC_RX.ExtId == Total_Vol_Cur_Ack)||(ACDC_RX.ExtId == GroupA_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|A组
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
-				for(char i = 0;i < 4;i++)	{*V++ = ADCD_RX.Data[3-i];	*C++ = ADCD_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
+				for(char i = 0;i < 4;i++)	{*V++ = ACDC_RX.Data[3-i];	*C++ = ACDC_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
 			}
-			if((ADCD_RX.ExtId >= Single_Module_Sta_Ack)&&(ADCD_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
+			if((ACDC_RX.ExtId >= Single_Module_Sta_Ack)&&(ACDC_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
 			{
-				memcpy(&Module_Sta_Ack_type.group,&ADCD_RX.Data[2],6);//读取0-7号模块组号 温度 状态
+				memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取0-7号模块组号 温度 状态
 //				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态是否正常
 //				{
 						//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
@@ -137,11 +137,11 @@ static void ACDC_RxMsg_Deal(void)
 		}
 		else if(Board_Type == 0x0B)
 		{
-			if(ADCD_RX.ExtId == GroupB_Number_Ack)	{Module_Rx_Flag.B_num = true;	Module_Status.numB = ADCD_RX.Data[2];}
-			if((ADCD_RX.ExtId == Total_Vol_Cur_Ack)||(ADCD_RX.ExtId == GroupB_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|B组
+			if(ACDC_RX.ExtId == GroupB_Number_Ack)	{Module_Rx_Flag.B_num = true;	Module_Status.numB = ACDC_RX.Data[2];}
+			if((ACDC_RX.ExtId == Total_Vol_Cur_Ack)||(ACDC_RX.ExtId == GroupB_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|B组
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
-				for(char i = 0;i < 4;i++)	{*V++ = ADCD_RX.Data[3-i];	*C++ = ADCD_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
+				for(char i = 0;i < 4;i++)	{*V++ = ACDC_RX.Data[3-i];	*C++ = ACDC_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
 			}
 		}		
 		RX_Flag.ACDC_Rx_Flag = false;
