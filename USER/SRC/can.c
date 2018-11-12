@@ -4,8 +4,8 @@
 //初始化BMS_CAN口:CAN1
 void BMS_Can_Init(void)  
 {                                                         
-	GPIO_PinConfigure(GPIOA,11,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
-	GPIO_PinConfigure(GPIOA,12,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
+	GPIO_PinConfigure(BMS_RX_PORT,BMS_RX_PIN,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
+	GPIO_PinConfigure(BMS_TX_PORT,BMS_TX_PIN,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
 	
 	CAN_InitTypeDef	CAN_InitStructure;
 	CAN_DeInit(CAN1);//将CANx寄存器全部设置为缺省值
@@ -74,8 +74,8 @@ void BMS_Can_Init(void)
 //初始化充电电源模块_CAN口:CAN2
 void ACDC_Module_Can_Init(void)  
 {                                                         
-	GPIO_PinConfigure(GPIOB,12,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
-	GPIO_PinConfigure(GPIOB,13,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
+	GPIO_PinConfigure(ACDC_RX_PORT,ACDC_RX_PIN,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
+	GPIO_PinConfigure(ACDC_TX_PORT,ACDC_TX_PIN,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
 	
 	CAN_InitTypeDef	CAN_InitStructure;
 	CAN_DeInit(CAN2);//将CANx寄存器全部设置为缺省值
@@ -111,9 +111,9 @@ void ACDC_Module_Can_Init(void)
 	CAN_FilterInitStructure.CAN_FilterNumber = 15;//指定过滤器组0-13
 	CAN_FilterInitStructure.CAN_FilterMode = CAN_FilterMode_IdMask;//指定过滤器为标识符屏蔽位模式
 	CAN_FilterInitStructure.CAN_FilterScale = CAN_FilterScale_32bit;//指定过滤器位宽为32位
-	CAN_FilterInitStructure.CAN_FilterIdHigh = (uint16_t)(((0x00000ABCU<<3)&0xffff0000)>>16);//板间数据传输地址后3位固定ABC
-	CAN_FilterInitStructure.CAN_FilterIdLow = (uint16_t)(((0x00000ABCU<<3)|CAN_RTR_DATA|CAN_ID_EXT)&0x0000ffff);
-	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = 0x0000;
+	CAN_FilterInitStructure.CAN_FilterIdHigh = (uint16_t)(((0xC0000ABCU<<3)&0xffff0000)>>16);//板间数据传输地址后3位固定ABC
+	CAN_FilterInitStructure.CAN_FilterIdLow = (uint16_t)(((0xC0000ABCU<<3)|CAN_RTR_DATA|CAN_ID_EXT)&0x0000ffff);//AB板只对来自C板的数据接受
+	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = (uint16_t)(0xf000U<<3);
 	CAN_FilterInitStructure.CAN_FilterMaskIdLow = (uint16_t)(0x0fffU<<3);
 	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = CAN_FilterFIFO1;//过滤器1关联到FIFO1
 	CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
@@ -135,7 +135,7 @@ void ACDC_Module_Can_Init(void)
 }
 
 
-/*******************************************BMS中断处理**************************************************/
+/************************BMS中断处理*****************************/
 Can_Rx_FlagBits	RX_Flag;
 CanRxMsg BMS_RX_0;
 void CAN1_RX0_IRQHandler(void)//负责接送多包
@@ -143,7 +143,6 @@ void CAN1_RX0_IRQHandler(void)//负责接送多包
 	CAN_Receive(CAN1, CAN_FIFO0, &BMS_RX_0);
 	Multi_Package_Deal();//处理BMS多包传输
 }
-
 
 CanRxMsg BMS_RX_1;
 void CAN1_RX1_IRQHandler(void)
@@ -153,23 +152,19 @@ void CAN1_RX1_IRQHandler(void)
 	RX_Flag.BMS_Rx_Flag1 = true;
 }
 
-/*******************************************ACDC中断处理************************************************/
+/************************ACDC中断处理***************************/
 CanRxMsg ACDC_RX;	    
 void CAN2_RX0_IRQHandler(void)
 {
   CAN_Receive(CAN2, CAN_FIFO0, &ACDC_RX);
 	RX_Flag.ACDC_Rx_Flag = true;
 }
-/*******************************************AB——C板通讯***********************************************/
+
+/************************AB——C板通讯****************************/
 CanRxMsg ABC_DATA_RX;
 void CAN2_RX1_IRQHandler(void)
 {
   CAN_Receive(CAN2, CAN_FIFO1, &ABC_DATA_RX);
-	if((ABC_DATA_RX.ExtId==0xB0000ABC)||(ABC_DATA_RX.ExtId==0xA0000ABC))//检查A/B板状态报文
-	{
-		if(ABC_DATA_RX.Data[0] == 0x01)//急停按下
-		;
-	}
-	else	RX_Flag.ABC_Data_Rx_Flag = true;
+	RX_Flag.ABC_Data_Rx_Flag = true;
 }
 

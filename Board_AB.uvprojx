@@ -423,19 +423,29 @@
               <FilePath>.\USER\SRC\main.c</FilePath>
             </File>
             <File>
-              <FileName>ACDC_Module.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\USER\SRC\ACDC_Module.c</FilePath>
-            </File>
-            <File>
-              <FileName>BMS.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\USER\SRC\BMS.c</FilePath>
-            </File>
-            <File>
               <FileName>can.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\USER\SRC\can.c</FilePath>
+            </File>
+            <File>
+              <FileName>acdc_module.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\SRC\acdc_module.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\SRC\bms.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\SRC\bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>lcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\SRC\lcd.c</FilePath>
             </File>
           </Files>
         </Group>

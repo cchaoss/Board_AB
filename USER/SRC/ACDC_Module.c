@@ -19,7 +19,7 @@ void ACDC_Module_Task(void const *argument)
 		
 		switch(ACDC_STA)
 		{
-			case Set_Group://设置模块分组A-B
+			case Set_Group:
 			{
 				if(Module_Rx_Flag.All_num&&(Module_Status.num>0))//读取模块总数成功&&模块数量>0
 				{	
@@ -40,8 +40,16 @@ void ACDC_Module_Task(void const *argument)
 					if(Module_Rx_Flag.A_num)
 					{
 						Module_Rx_Flag.A_num = false;
-						if(Module_Status.numA > 0)	ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
-							else ACDC_STA = Set_Group;//重新设置组号
+						if(Module_Status.numA == 0)	
+						{
+							Type_DM.DErr = No_Module;//故障：无电源模块！
+							ACDC_STA = Set_Group;//重新开始
+						}							
+						else 
+						{
+							Type_DM.MNum = Module_Rx_Flag.A_num;
+							ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
+						}
 					}
 					else{TxMsg_ACDC.ExtId = GroupA_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//读取A组模块数量
 				}
@@ -50,8 +58,16 @@ void ACDC_Module_Task(void const *argument)
 					if(Module_Rx_Flag.B_num)
 					{
 						Module_Rx_Flag.B_num = false;
-						if(Module_Status.numB>0)	ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
-							else ACDC_STA = Set_Group;//重新设置组号
+						if(Module_Status.numB == 0)	
+						{
+							Type_DM.DErr = No_Module;//故障：无电源模块！
+							ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
+						}
+						else
+						{
+							Type_DM.MNum = Module_Rx_Flag.B_num;
+							ACDC_STA = Set_Group;//重新设置组号
+						}
 					}
 					else{TxMsg_ACDC.ExtId = GroupB_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//读取A组模块数量	
 				}
@@ -116,10 +132,18 @@ static void ACDC_RxMsg_Deal(void)
 {
 	if(RX_Flag.ACDC_Rx_Flag)
 	{	
-		if(ACDC_RX.ExtId == Total_Number_Ack)	{Module_Rx_Flag.All_num = true;	Module_Status.num = ACDC_RX.Data[2];}		
+		if(ACDC_RX.ExtId == Total_Number_Ack)	
+		{
+			Module_Rx_Flag.All_num = true;	
+			Module_Status.num = ACDC_RX.Data[2];
+		}		
 		if(Board_Type == 0x0A)
 		{			
-			if(ACDC_RX.ExtId == GroupA_Number_Ack)	{Module_Rx_Flag.A_num = true;	Module_Status.numA = ACDC_RX.Data[2];}
+			if(ACDC_RX.ExtId == GroupA_Number_Ack)	
+			{
+				Module_Rx_Flag.A_num = true;	
+				Module_Status.numA = ACDC_RX.Data[2];
+			}
 			if((ACDC_RX.ExtId == Total_Vol_Cur_Ack)||(ACDC_RX.ExtId == GroupA_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|A组
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
@@ -127,17 +151,24 @@ static void ACDC_RxMsg_Deal(void)
 			}
 			if((ACDC_RX.ExtId >= Single_Module_Sta_Ack)&&(ACDC_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
 			{
-				memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取0-7号模块组号 温度 状态
-//				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态是否正常
-//				{
-						//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
-//					TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
-//				}
+				memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取所有模块组号 温度 状态
+				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态是否正常
+				{
+					Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
+					Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
+					Type_DM.MErr0 = Module_Sta_Ack_type.sta0;
+					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
+					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
+				}
 			}
 		}
 		else if(Board_Type == 0x0B)
 		{
-			if(ACDC_RX.ExtId == GroupB_Number_Ack)	{Module_Rx_Flag.B_num = true;	Module_Status.numB = ACDC_RX.Data[2];}
+			if(ACDC_RX.ExtId == GroupB_Number_Ack)	
+			{
+				Module_Rx_Flag.B_num = true;	
+				Module_Status.numB = ACDC_RX.Data[2];
+			}
 			if((ACDC_RX.ExtId == Total_Vol_Cur_Ack)||(ACDC_RX.ExtId == GroupB_Vol_Cur_Ack))//读取模块输出电压总电流//所有模块|B组
 			{
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;

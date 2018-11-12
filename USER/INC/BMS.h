@@ -9,16 +9,16 @@
 #define ACDC_MAX_CUR	(4000-3000)	//300A
 enum _BMS_STA
 {
-	BEGIN = 0,
-	SEND_9728 = 1,
-	SEND_256  = 2,
-	SEND_2048 = 3,
-	SEND_2560 = 4,
-	SEND_4608 = 5,
-	SEND_6656 = 6,
+	BEGIN = 0,		//待插抢
+	SEND_9728 = 1,//握手
+	SEND_256  = 2,//辨识
+	SEND_2048 = 3,//电池准备
+	SEND_2560 = 4,//充电机准备
+	SEND_4608 = 5,//充电中
+	SEND_6656 = 6,//停止
 	SEND_7424 = 7,
-	TIME_OUT = 8,
-	STOP = 9,
+	TIME_OUT = 8,	//超时
+	STOP = 9,			//停止
 };
 enum _bms_rx_num
 {
@@ -109,9 +109,9 @@ typedef struct
 typedef struct
 {
 	uint8_t IdentifyTimeOut;  		//辨识通讯超时
-	uint8_t ChargingParamTimeOut;
-	uint8_t BMSChargingStaTimeOut;
-	uint8_t Summary;//充电统计状态
+	uint8_t ChargingParamTimeOut;	//1532 2304超时
+	uint8_t BMSChargingStaTimeOut;//4096 4352 6400超时
+	uint8_t Summary;							//充电统计超时
 }stuPGN7936Type;
 /*************************BMS发过来的数据****************************/
 typedef struct 
@@ -211,7 +211,11 @@ enum _guzhang
 	Bat_Vol_ERR,
 };
 
-extern unsigned char guzhang;
+extern stuPGN4352Type Data_4352;
+extern stuPGN6656Type Data_6656;
+extern stuPGN6400Type Data_6400;
+extern stuPGN7936Type Data_7936;
+extern unsigned char guzhang,BMS_STA;
 static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void Charge_Close(void);
 static void BMS_Data_Init(void);
