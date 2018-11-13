@@ -14,7 +14,7 @@
 enum _Device_err
 {
 	Geodesic = 1,			//接地故障（只需要检查A）
-	Disconnect_C,			//与C板无连接
+	Disconnect_C,			//与C板通讯故障
 	No_Module,				//无电源模块连接
 	Relay_Err,				//本枪继电器状态错误
 	Dc_Table_Err,			//本枪直流表无连接
@@ -37,18 +37,34 @@ enum _Timeout_Bms
 	BST6400_Timeout= 6,
 	BSD7168_Timeout= 7,
 };
+enum _guzhang
+{
+	Lock_ERR = 1,//无法上锁
+//	Gun_Vol_ERR=2,//枪端电压>10V
+	Insulation_ERR=3,//绝缘检测错误
+//	Tap_Check_ERR=4,//泄放检查错误
+	Bat_Vol_ERR=5,//电池电压与报文偏差过大
+};
 enum _Err_Bms
 {
 	Soc_Full = 1,//达到soc 电压
 	Insulation=2,//绝缘故障
-	OutNetTemp=3,//输出连接器过温
-	BmsOutNetTemp=4,//BMS元件输出连接器过温
+	BmsOutNetTemp=4,//BMS元件/输出连接器过温
 	ChargeNet = 5,//充电连接器故障
 	BatTemp = 6,//电池组温度过高
 	HighRelay = 7,//高压继电器故障
 	Vol_2 = 8,//检查点2电压检查故障
 	CurOver = 9,//电流过大
-	VolErr = 10,//电压异常
+	CurUnknown=10,//电流不可信
+	VolErr = 11,//电压异常
+	VolUnknown=12,//电压不可信
+};
+enum _manual_rea
+{
+	JT_Stop = 1,
+	Card_Stop = 2,
+	App_Stop = 3,
+	Start_Stop = 4,
 };
 
 /*A/B<——>C数据交互帧内容*/
@@ -69,13 +85,14 @@ typedef struct
 	uint8_t time_out;		//超时原因
 	uint8_t DErr;				//桩故障：锁 外侧电压 绝缘 DC外侧电压与电池电压<5%
 	uint8_t BErr;				//BMS中止原因
-	uint8_t Manual;			//人工中止原因：急停 刷卡 APP
+	uint8_t Manual;			//人工中止原因：急停 刷卡 APP 启停按钮
 }Bms_Type;
 typedef struct
 {
 	uint16_t Vol;	//5505=550.5V
 	uint16_t Cur;	//1205=120.5A
 	uint8_t  Soc;	//88%
+	uint16_t  KW;	//5505=550.5KW
 }VolCur_Type;
 typedef struct
 {
@@ -83,14 +100,14 @@ typedef struct
 	uint8_t B_Start_Stop;//0X00关闭B枪，0X01暂停，0X02开启
 	uint8_t Module_Assign;//0XAB各自用本组模块，0XAA全部模块给A枪用，0XBB全部模块给B枪用
 }Control_Type;
-extern Device_Module_Type Type_DM;
 extern Bms_Type	Type_BMS;
 extern VolCur_Type	Type_VolCur;
-extern Control_Type	Type_Control_C;
+extern Device_Module_Type Type_DM;
+extern Control_Type	Type_Control_Cmd;
 
 extern unsigned char Board_Type;//A B板定义
 
-static void ABC_Data_Deal(void);
+static void ABC_Data_Deal(unsigned short Task_Time);
 static void Timer1_Callback(void const *arg);
 void System_Task(void const *argument);
 void BMS_Task(void const *argument);                

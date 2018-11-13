@@ -201,17 +201,8 @@ typedef struct
 
 #define Bound(val,max,min) ((val) > (max)? (max) : (val) < (min)? (min) : (val))
 
-enum _guzhang
-{
-	OK,
-	Lock_ERR,
-	Gun_Vol_ERR,
-	Insulation_ERR,
-	Tap_Check_ERR,
-	Bat_Vol_ERR,
-};
-
 extern stuPGN4352Type Data_4352;
+extern stuPGN4608Type Data_4608;
 extern stuPGN6656Type Data_6656;
 extern stuPGN6400Type Data_6400;
 extern stuPGN7936Type Data_7936;

@@ -1,6 +1,7 @@
 #include "main.h"
 #include "can.h"
 #include "bms.h"
+#include "lcd.h"
 
 osThreadId MAIN_ID;//任务ID
 osThreadId	System_Task_ID;
@@ -23,8 +24,8 @@ int main(void)
 	Bsp_init();						//初始化板级设备	
 	osKernelInitialize();	//初始化RTX系统
 	System_Task_ID 			= osThreadCreate(osThread(System_Task), NULL);			//创建主任务
-	BMS_Task_ID					= osThreadCreate(osThread(BMS_Task), NULL);					//创建汽车BMS通讯任务
-	ACDC_Module_Task_ID	= osThreadCreate(osThread(ACDC_Module_Task), NULL);	//创建交流-直流电源模块通讯任务
+//	BMS_Task_ID					= osThreadCreate(osThread(BMS_Task), NULL);					//创建汽车BMS通讯任务
+//	ACDC_Module_Task_ID	= osThreadCreate(osThread(ACDC_Module_Task), NULL);	//创建交流-直流电源模块通讯任务
 	osKernelStart();    	//开始任务创建以上任务
 	
 	TIMER1_ID = osTimerCreate(osTimer(Timer1), osTimerPeriodic, NULL);
@@ -53,12 +54,12 @@ VolCur_Type	Type_VolCur;
 Device_Module_Type Type_DM;
 Control_Type	Type_Control_Cmd;
 CanTxMsg TxMsg_ABC = {0, 0, CAN_Id_Extended, CAN_RTR_Data, 8, {0}};//扩展帧 数据帧
-unsigned char Board_C_Sta;//0:C板不存在 1:C板通讯正常 0xFF:C板通讯超时
+unsigned char Board_C_Sta = 0;//0:C板不存在 1:C板通讯正常 0xFF:C板通讯超时
 //处理AB板数据上报到C板
 void System_Task(void const *argument)
 {
 	const unsigned short System_Task_Time = 75U;
-	static unsigned char STEP;
+	static unsigned char t,STEP;
 	//Board_Type检查
 	//接地检查		{Type_DM.DSta = 2;//桩故障 Type_DM.DErr = Geodesic;//接地检查只对A板}
 	//断开S1S2S3S4
@@ -67,7 +68,7 @@ void System_Task(void const *argument)
 	{
 		if(0)	Type_DM.JiTing = 1;//检查急停是否按下
 			else Type_DM.JiTing = 0;
-		ABC_Data_Deal();//解析C板数据
+		ABC_Data_Deal(System_Task_Time);//解析C板数据
 		
 		switch(STEP)
 		{
@@ -90,31 +91,50 @@ void System_Task(void const *argument)
 							else if(Data_7936.BMSChargingStaTimeOut&0x01) Type_BMS.time_out = BCS4352_Timeout;
 								else if(Data_7936.BMSChargingStaTimeOut&0x01) Type_BMS.time_out = BCL4096_Timeout;
 				Type_BMS.DErr = guzhang;			
-				if((Data_6400.BMSStopChargingReason&0x05)!=0)	Type_BMS.BErr = Soc_Full;//充满停止(达到所需SOC)
-				if(Data_6400.BMSFaultReason&0x01)	Type_BMS.BErr = Insulation;
-				
+				if(Data_6400.BMSFaultReason&0x03)	Type_BMS.BErr = Insulation;//绝缘故障
+					else if(Data_6400.BMSFaultReason&0x3c)	Type_BMS.BErr = BmsOutNetTemp;//BMS元件/输出连接器过温(2合1)
+						else if(Data_6400.BMSFaultReason&0xc0)	Type_BMS.BErr = ChargeNet;//充电连接器故障
+							else if(Data_6400.BMSFaultReason&0x0300)	Type_BMS.BErr = BatTemp;//电池组温度过高
+								else if(Data_6400.BMSFaultReason&0x0c00)	Type_BMS.BErr = HighRelay;//高压继电器故障
+									else if(Data_6400.BMSFaultReason&0x3000)	Type_BMS.BErr = Vol_2;////检查点2电压检查故障
+				if(Data_6400.BMSStopChargingReason&0x01)	Type_BMS.BErr = CurOver;//电流过大
+					else if(Data_6400.BMSStopChargingReason&0x02)	Type_BMS.BErr = CurUnknown;//电流不可信
+						else if(Data_6400.BMSStopChargingReason&0x04)	Type_BMS.BErr = CurOver;//电压异常
+							else if(Data_6400.BMSStopChargingReason&0x08)	Type_BMS.BErr = VolUnknown;//电压不可信
+				if((Data_6400.BMSStopChargingReason&0x05)||(Data_4352.PreSOC>=98))	Type_BMS.BErr = Soc_Full;//充满停止(达到所需SOC)	
+//				if(Type_DM.JiTing == 1)	Type_BMS.Manual = JT;//3种情况在情况发生代码段赋值是否好些？
+//				else if
 				STEP = 2;
 			}break;
 			case 2://电压电流SOC帧
 			{
-				
+				Type_VolCur.Vol = Data_4608.OutputVolt;//模块测量
+				Type_VolCur.Cur =	Data_4608.OutputCurr;
+				Type_VolCur.Soc = Data_4352.PreSOC;		 //车反馈
+				Type_VolCur.KW  =	305;//30.5kw
 				STEP = 0;
 			}break;
 			default:break;
 		}
 		
-		if(Board_C_Sta!=0)	
+		if(Board_C_Sta == 0)//未连接C板才做显示(简易)
 		{
-			CAN_Transmit(CAN2, &TxMsg_ABC);//只要连接了C板就循环发送
+			t = (t+1)%(1000/System_Task_Time);//显示任务1s刷新一次
+			if(t == 1)	LcdShow();		
+		}
+		else//只要连接了C板就循环发送
+		{
+			CAN_Transmit(CAN2, &TxMsg_ABC);
 			memset(TxMsg_ABC.Data,0,sizeof(TxMsg_ABC.Data));
 		}
+		
 		osDelay(System_Task_Time);
 	}
 }
 
 
 unsigned char count;
-static void ABC_Data_Deal(void)
+static void ABC_Data_Deal(unsigned short Task_Time)
 {
 	if(RX_Flag.ABC_Data_Rx_Flag)
 	{
@@ -122,12 +142,16 @@ static void ABC_Data_Deal(void)
 		if(ABC_DATA_RX.ExtId==0xC0000ABC)//充电启停/暂停，模块分配
 		{
 			Board_C_Sta = 0x01;//与C板通讯正常
+			memcpy(&Type_Control_Cmd,ABC_DATA_RX.Data,sizeof(Type_Control_Cmd));
 		}
 		if(ABC_DATA_RX.ExtId==0xC1000ABC)//参数设置
 		{}
 		count = 0;
 	}else count++;
-	if((count > 50)&&(Board_C_Sta==1))	Board_C_Sta = 0xFF;//通讯故障（5s内未收到C板数据）
-	
-	if(Board_C_Sta != 0x01)	Type_DM.DErr = Disconnect_C;//没有连上C板
+	if((count > (5000/Task_Time))&&(Board_C_Sta==1))	
+	{
+		Board_C_Sta = 0xFF;//通讯故障（5s内未收到C板数据）
+		Type_DM.DErr = Disconnect_C;
+	}
+	//if(Board_C_Sta != 0x01)	//没有连上C板
 }
