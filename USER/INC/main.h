@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "stm32f10x.h"                  
 #include "cmsis_os.h"
 #include "GPIO_STM32F10x.h"
@@ -105,7 +106,7 @@ extern VolCur_Type	Type_VolCur;
 extern Device_Module_Type Type_DM;
 extern Control_Type	Type_Control_Cmd;
 
-extern unsigned char Board_Type;//A B板定义
+extern unsigned char Board_Type;//A B板定义0X0A 0X0B
 
 static void ABC_Data_Deal(unsigned short Task_Time);
 static void Timer1_Callback(void const *arg);

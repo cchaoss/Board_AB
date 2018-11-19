@@ -1031,15 +1031,12 @@ static void SetSysClockTo72(void)
     /* Configure PLLs ------------------------------------------------------*/
     /* PLL2 configuration: PLL2CLK = (HSE / 5) * 8 = 40 MHz */
     /* PREDIV1 configuration: PREDIV1CLK = PLL2 / 5 = 8 MHz */
+        
     RCC->CFGR2 &= (uint32_t)~(RCC_CFGR2_PREDIV2 | RCC_CFGR2_PLL2MUL |
                               RCC_CFGR2_PREDIV1 | RCC_CFGR2_PREDIV1SRC);
-		//STM32F105库函数默认使用的是25MHZ晶振，通过如下配置最终得到系统时钟72MHZ
-//    RCC->CFGR2 |= (uint32_t)(RCC_CFGR2_PREDIV2_DIV5 | RCC_CFGR2_PLL2MUL8 |
-//                             RCC_CFGR2_PREDIV1SRC_PLL2 | RCC_CFGR2_PREDIV1_DIV5);
-		//如果使用8MHZ晶振，通过如下配置最终得到系统时钟72MHZ
-		RCC->CFGR2 |= (uint32_t)(RCC_CFGR2_PREDIV2_DIV8| RCC_CFGR2_PLL2MUL8 |
+    RCC->CFGR2 |= (uint32_t)(RCC_CFGR2_PREDIV2_DIV8 | RCC_CFGR2_PLL2MUL8 |
                              RCC_CFGR2_PREDIV1SRC_PLL2 | RCC_CFGR2_PREDIV1_DIV1);
-
+  
     /* Enable PLL2 */
     RCC->CR |= RCC_CR_PLL2ON;
     /* Wait till PLL2 is ready */

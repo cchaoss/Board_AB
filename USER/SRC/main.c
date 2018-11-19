@@ -10,8 +10,8 @@ osThreadId	ACDC_Module_Task_ID;
 
 //Ïß³Ì¶¨Òå½á¹¹Ìå:ÈÎÎñÃû¡¢ÓÅÏÈ¼¶¡¢È±Ê¡¡¢ÈÎÎñÕ»¿Õ¼ä£¨byte£©
 osThreadDef(System_Task, 	osPriorityHigh, 1, 300);
-osThreadDef(BMS_Task, 		osPriorityHigh, 1, 300); 
-osThreadDef(ACDC_Module_Task, osPriorityNormal, 1, 300);
+osThreadDef(BMS_Task, 		osPriorityHigh, 1, 600); 
+osThreadDef(ACDC_Module_Task, osPriorityNormal, 1, 200);
 
 #define TIMER1_Delay	50U//ms
 osTimerId TIMER1_ID;//Èí¶¨Ê±Æ÷ID
@@ -24,8 +24,8 @@ int main(void)
 	Bsp_init();						//³õÊ¼»¯°å¼¶Éè±¸	
 	osKernelInitialize();	//³õÊ¼»¯RTXÏµÍ³
 	System_Task_ID 			= osThreadCreate(osThread(System_Task), NULL);			//´´½¨Ö÷ÈÎÎñ
-//	BMS_Task_ID					= osThreadCreate(osThread(BMS_Task), NULL);					//´´½¨Æû³µBMSÍ¨Ñ¶ÈÎÎñ
-//	ACDC_Module_Task_ID	= osThreadCreate(osThread(ACDC_Module_Task), NULL);	//´´½¨½»Á÷-Ö±Á÷µçÔ´Ä£¿éÍ¨Ñ¶ÈÎÎñ
+	BMS_Task_ID					= osThreadCreate(osThread(BMS_Task), NULL);					//´´½¨Æû³µBMSÍ¨Ñ¶ÈÎÎñ
+	ACDC_Module_Task_ID	= osThreadCreate(osThread(ACDC_Module_Task), NULL);	//´´½¨½»Á÷-Ö±Á÷µçÔ´Ä£¿éÍ¨Ñ¶ÈÎÎñ
 	osKernelStart();    	//¿ªÊ¼ÈÎÎñ´´½¨ÒÔÉÏÈÎÎñ
 	
 	TIMER1_ID = osTimerCreate(osTimer(Timer1), osTimerPeriodic, NULL);
@@ -42,10 +42,16 @@ static void Timer1_Callback(void const *arg)
 	kkk = (kkk+1)%(500/TIMER1_Delay);
 	if(kkk == 1)
 	{
-		GPIO_PinWrite(LED_RUN_PORT,LED_RUN_PIN,!GPIO_PinRead(LED_RUN_PORT,LED_RUN_PIN));//RUN_LED 500s·´×ªÒ»´Î
+		GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!GPIO_PinRead(LED_BOARD_PORT,LED_RUN_PIN));//RUN_LED 500s·´×ªÒ»´Î
 		IWDG_ReloadCounter();//ÄÚ²¿¿´ÃÅ¹·Î¹¹·£¡
 		GPIO_PinWrite(GPIOD,2,0);GPIO_PinWrite(GPIOD,2,1);//Íâ²¿Ó²¼ş¿ªÃÅ¹·Î¹¹·£
 	}
+	DI_Ack.JT 	 = DI_Status_Check(DI_Filter.JT,GPIO_PinRead(JT_PORT,JT_PIN));
+	DI_Ack.START = DI_Status_Check(DI_Filter.START,GPIO_PinRead(START_PORT,START_PIN));
+	DI_Ack.GUN   = DI_Status_Check(DI_Filter.GUN,GPIO_PinRead(K_GUN_ACK_PORT,K_GUN_ACK_PIN));
+	DI_Ack.LOCK  = DI_Status_Check(DI_Filter.LOCK,GPIO_PinRead(LOCK_ACK_PORT,LOCK_ACK_PIN));
+	DI_Ack.KK_H  = DI_Status_Check(DI_Filter.KK_H,GPIO_PinRead(KK_ACK_PORT,KK_ACK_PIN1));
+	DI_Ack.KK_L  = DI_Status_Check(DI_Filter.KK_L,GPIO_PinRead(KK_ACK_PORT,KK_ACK_PIN2));
 }	
 
 
@@ -60,16 +66,17 @@ void System_Task(void const *argument)
 {
 	const unsigned short System_Task_Time = 75U;
 	static unsigned char t,STEP;
-	//Board_Type¼ì²é
-	//½ÓµØ¼ì²é		{Type_DM.DSta = 2;//×®¹ÊÕÏ Type_DM.DErr = Geodesic;//½ÓµØ¼ì²éÖ»¶ÔA°å}
-	//¶Ï¿ªS1S2S3S4
-	//¼ì²éS1S2S3S4×´Ì¬ÊÇ·ñÕı³£{Type_DM.DSta = 2;//×®¹ÊÕÏ Type_DM.DErr = Relay_Err;//¼ÌµçÆ÷×´Ì¬²»Õı³£}
+	if(Check_PE())		Type_DM.DErr = Geodesic;//½ÓµØ¹ÊÕÏ
+	if(GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1))	Board_Type  = 0X0A;//¶ÁÈ¡²¦Âë¿ª¹ØµØÖ· È·¶¨A B°å
+		else	{Board_Type  = 0X0B;	Type_DM.DErr = 0;}//½ÓµØ¼ì²éÓÉA°å¼ì²éB°åÎŞ½ÓµØ¹ÊÕÏ
+	if((DI_Ack.GUN&DI_Ack.KK_H&DI_Ack.KK_H)!=0)	Type_DM.DErr = Relay_Err;//¼ÌµçÆ÷ÎŞ·¨¶Ï¿ª
+	Type_DM.JiTing = 0;//Ä¬ÈÏ¼±Í£Î´°´ÏÂ
 	while(1)
 	{
-		if(0)	Type_DM.JiTing = 1;//¼ì²é¼±Í£ÊÇ·ñ°´ÏÂ
-			else Type_DM.JiTing = 0;
-		ABC_Data_Deal(System_Task_Time);//½âÎöC°åÊı¾İ
+		if(DI_Ack.JT == 0)	Type_DM.JiTing = 1;//¼±Í£°´Å¥°´ÏÂ
+			else if(DI_Ack.JT == 1)Type_DM.JiTing = 0;
 		
+		ABC_Data_Deal(System_Task_Time);//½âÎöC°åÊı¾İ
 		switch(STEP)
 		{
 			case 0://×®×´Ì¬/Ä£¿é×´Ì¬Ö¡
@@ -103,7 +110,6 @@ void System_Task(void const *argument)
 							else if(Data_6400.BMSStopChargingReason&0x08)	Type_BMS.BErr = VolUnknown;//µçÑ¹²»¿ÉĞÅ
 				if((Data_6400.BMSStopChargingReason&0x05)||(Data_4352.PreSOC>=98))	Type_BMS.BErr = Soc_Full;//³äÂúÍ£Ö¹(´ïµ½ËùĞèSOC)	
 //				if(Type_DM.JiTing == 1)	Type_BMS.Manual = JT;//3ÖÖÇé¿öÔÚÇé¿ö·¢Éú´úÂë¶Î¸³ÖµÊÇ·ñºÃĞ©£¿
-//				else if
 				STEP = 2;
 			}break;
 			case 2://µçÑ¹µçÁ÷SOCÖ¡
@@ -120,7 +126,7 @@ void System_Task(void const *argument)
 		if(Board_C_Sta == 0)//Î´Á¬½ÓC°å²Å×öÏÔÊ¾(¼òÒ×)
 		{
 			t = (t+1)%(1000/System_Task_Time);//ÏÔÊ¾ÈÎÎñ1sË¢ĞÂÒ»´Î
-			if(t == 1)	LcdShow();		
+			//if(t == 1)	LcdShow();		
 		}
 		else//Ö»ÒªÁ¬½ÓÁËC°å¾ÍÑ­»··¢ËÍ
 		{
@@ -144,8 +150,7 @@ static void ABC_Data_Deal(unsigned short Task_Time)
 			Board_C_Sta = 0x01;//ÓëC°åÍ¨Ñ¶Õı³£
 			memcpy(&Type_Control_Cmd,ABC_DATA_RX.Data,sizeof(Type_Control_Cmd));
 		}
-		if(ABC_DATA_RX.ExtId==0xC1000ABC)//²ÎÊıÉèÖÃ
-		{}
+		if(ABC_DATA_RX.ExtId==0xC1000ABC);//TODO:²ÎÊıÉèÖÃ
 		count = 0;
 	}else count++;
 	if((count > (5000/Task_Time))&&(Board_C_Sta==1))	
@@ -153,5 +158,4 @@ static void ABC_Data_Deal(unsigned short Task_Time)
 		Board_C_Sta = 0xFF;//Í¨Ñ¶¹ÊÕÏ£¨5sÄÚÎ´ÊÕµ½C°åÊı¾İ£©
 		Type_DM.DErr = Disconnect_C;
 	}
-	//if(Board_C_Sta != 0x01)	//Ã»ÓĞÁ¬ÉÏC°å
 }

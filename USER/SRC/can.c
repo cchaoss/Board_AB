@@ -1,11 +1,12 @@
 #include "can.h"
 #include "bms.h"
+#include "cmsis_os.h"
 
 //初始化BMS_CAN口:CAN1
 void BMS_Can_Init(void)  
 {                                                         
-	GPIO_PinConfigure(BMS_RX_PORT,BMS_RX_PIN,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
-	GPIO_PinConfigure(BMS_TX_PORT,BMS_TX_PIN,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
+	GPIO_PinConfigure(GPIOA,11,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
+	GPIO_PinConfigure(GPIOA,12,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
 	
 	CAN_InitTypeDef	CAN_InitStructure;
 	CAN_DeInit(CAN1);//将CANx寄存器全部设置为缺省值
@@ -23,10 +24,8 @@ void BMS_Can_Init(void)
 	CAN_InitStructure.CAN_BS1 = CAN_BS1_13tq;			//时间段1位13个时间单位		
 	CAN_InitStructure.CAN_BS2 = CAN_BS2_2tq;			//时间段2为2个时间单位
 	
-	//BaudRate=72M/2/CAN_Prescaler/(1+13+2)
-	////250K时的配置
+	////250K时的配置//BaudRate=72M/2/CAN_Prescaler/(1+13+2)
 	CAN_InitStructure.CAN_Prescaler = 9;//时间单位长度为60	//72M/2/9/(1+13+2)=0.25 =250K
-	//125K时的配置
 	//CAN_InitStructure.CAN_Prescaler = 18;break;//时间单位长度为60 //72M/2/18/(1+13+2)=0.125 =125K
 	CAN_Init(CAN1, &CAN_InitStructure);
 
@@ -74,8 +73,8 @@ void BMS_Can_Init(void)
 //初始化充电电源模块_CAN口:CAN2
 void ACDC_Module_Can_Init(void)  
 {                                                         
-	GPIO_PinConfigure(ACDC_RX_PORT,ACDC_RX_PIN,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
-	GPIO_PinConfigure(ACDC_TX_PORT,ACDC_TX_PIN,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
+	GPIO_PinConfigure(GPIOB,12,GPIO_IN_PULL_UP,GPIO_MODE_INPUT);//RX上拉输入
+	GPIO_PinConfigure(GPIOB,13,GPIO_AF_PUSHPULL,GPIO_MODE_OUT50MHZ);//TX复用推挽输出
 	
 	CAN_InitTypeDef	CAN_InitStructure;
 	CAN_DeInit(CAN2);//将CANx寄存器全部设置为缺省值

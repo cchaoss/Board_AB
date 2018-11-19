@@ -1,5 +1,4 @@
 #include "lcd.h"
-#include <string.h>
 #include "bms.h"
 #include "main.h"
 #include "acdc_module.h"
@@ -96,12 +95,11 @@ void LCD_USART2_Config(uint32_t bound)
 //串口2中断服务函数,接收不定长数据---LCD
 void LCD_USART_IRQHandler(void)
 {
-	uint8_t clear;
+	uint8_t clear = clear;
 	if(USART_GetITStatus(LCD_USARTx, USART_IT_IDLE) != RESET)
 	{
 		clear = LCD_USARTx->SR;
 		clear = LCD_USARTx->DR;//先读SR再读DR才能清除
-		clear = clear;//消除警告
 		Uart_Flag.Lcd_Rx_Flag = true;
 	}
 }
@@ -109,6 +107,7 @@ void LCD_USART_IRQHandler(void)
 
 void show_number(unsigned int number,unsigned short x,unsigned short y)
 {
+															//不显示背景色 无符号数 无效不显示 大小8*16
 	u8 Show_buff[21] = {0xAA,0x14,0x01,0xff,0xff,0x00,0x00,
 											0x08,0x02,//整数位数，小数位数
 											0x00,0x00,0x00,0x00,//坐标X,Y
@@ -127,6 +126,7 @@ void show_number(unsigned int number,unsigned short x,unsigned short y)
 
 void Show_hanzi(unsigned char *hanzi,unsigned char size,unsigned short x,unsigned short y)
 {
+															//不显示背景色 8*16 字符颜色 背景颜色
 	u8 Show_buff[45] = {0xAA,0x11,0x01,0xff,0xff,0x00,0x00,
 												0x00,0x00,0x00,0x00,
 												0x00,0x00,0x00,0x00,};
@@ -149,15 +149,15 @@ void switch_page(unsigned char page)
 	USART2_DMA_send(Show_buff,8);
 }
 
-Display_Position SHOW = {{60,160},//P0 //x-y
-												 {60,120},//P1_V
-												 {60,160},//P1_A
-												 {60,200},//P1_Soc
-												 {60,240},//P1_KW
-												 {60,280},//P1_Time
-												 {60,160},//P2_STOP
-												 {60,240},//P2_Exp
-												 {60,160}};//P3_Err
+Display_Position SHOW = {{55,150},//P0 //x-y
+												 {116,192},//P1_V
+												 {116,223},//P1_A
+												 {101,164},//P1_Soc
+												 {116,250},//P1_KW
+												 {133,280},//P1_Time
+												 {55,150},//P2_STOP
+												 {36,260},//P2_Exp
+												 {55,150}};//P3_Err
 unsigned char Check_Hand[6] = {0xAA,0x00,0xCC,0x33,0xC3,0x3C};//握手指令
 unsigned char Link_ok = 0;//LCD屏连接状态1连接 0未连接
 
@@ -167,7 +167,8 @@ void LcdShow(void)
 	{
 		unsigned char LCD_DataLong = LCD_Buff_Size - DMA_GetCurrDataCounter(USART2_RX_DMA_CHANNEL);
 		USART2_DMA_receive();
-		if(LCD_CommandBuff[0]==0xAA)	Link_ok = 1;//LCD设备存在
+		if((LCD_CommandBuff[0]==0xAA)&&(LCD_CommandBuff[0]==0x00)&&(LCD_CommandBuff[0]==0x4F)&&(LCD_CommandBuff[0]==0x4B))	
+			Link_ok = 1;//LCD设备存在
 		memset(LCD_CommandBuff,0,LCD_DataLong);
 		Uart_Flag.Lcd_Rx_Flag = false;
 	}

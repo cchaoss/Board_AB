@@ -7,7 +7,8 @@
 typedef struct
 {
 	char Lcd_Rx_Flag:1;
-	char	reserved:7;
+	char Meter_Rx_Flag:1;
+	char reserved:6;
 }Uart_Rx_FlagBits;
 
 typedef struct
@@ -24,8 +25,7 @@ typedef struct
 }Display_Position;
 
 
-
-
-extern void LCD_USART2_Config(u32 bound);
-extern void LcdShow(void);
+extern Uart_Rx_FlagBits Uart_Flag;
+void LCD_USART2_Config(u32 bound);
+void LcdShow(void);
 #endif

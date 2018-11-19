@@ -46,12 +46,24 @@ TX_BMS CSD_7424 = {(7424>>8),		6,		 0xf4,		 0x56,		 8,					250,			&Data_7424};//
 TX_BMS CEM_7936 = {(7936>>8),		2,		 0xf4,		 0x56,		 4,					250,			&Data_7936};//充电机错误报文
 float CC = 12;
 unsigned char OUT,guzhang,BMS_STA = BEGIN;
+
+//osMailQDef(BMS_RX_FIFO,6,CanRxMsg);
+//osMailQId	BMS_RX_FIFO_ID;
+//osEvent fifomsg;
+//void gedmail(void)
+//{
+//		 fifomsg = osMailGet(BMS_RX_FIFO_ID,0);
+//	memcpy(CanRxMsg,fifomsg.value,sizeof(CanRxMsg))
+//}
+
 void BMS_Task(void const *argument)
 {
 	const unsigned char BMS_Task_Time = 25U;//10ms循环
 	static unsigned short t,timeout,timeout1;
 	static bool once_run = true;
 	
+//	BMS_RX_FIFO_ID = osMailCreate(osMailQ(BMS_RX_FIFO),osThreadGetId());
+//	osMailCAlloc(BMS_RX_FIFO_ID,0);
 	while(1)
 	{	
 		Single_Package_Deal();//负责接送处理单包数据
@@ -97,7 +109,7 @@ void BMS_Task(void const *argument)
 					else if(timeout > 20)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.IdentifyTimeOut |= 0x01;}//接收车辆辨识报文BRM超时5s
 				
 				if(RX_BMS_TAB[WAIT_1536_BCP].Rx_status == 1)	{t = timeout = 0;	BMS_STA = SEND_2048;}
-					else if(timeout > 20)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x01;}//接受1536电池充电参数超时5s
+					else if(timeout > 30)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x01;}//接受1536电池充电参数超时7s(default 5s)
 			}break;
 			
 			case SEND_2048://充电机最大输出能力/时间同步
@@ -202,7 +214,7 @@ void BMS_Task(void const *argument)
 					if((t>200/BMS_Task_Time)||(0))//delay200ms(或者电流5A以下)-保护继电器寿命
 					{	//断开K1K2
 						OUT++;//重连次数+1
-						BMS_Data_Init();//情况接受标记
+						BMS_Data_Init();//报文接受标记
 						t = timeout = timeout1 = 0;						
 						BMS_STA = SEND_256;//重新开始辨识
 					}					

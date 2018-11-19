@@ -2,7 +2,6 @@
 #define __BMS_H
 
 #include "main.h"
-#include "stm32f10x_can.h"
 
 #define ACDC_MAX_VOL	7500				//750V
 #define ACDC_MIN_VOL	2000				//200V
@@ -211,6 +210,7 @@ static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void Charge_Close(void);
 static void BMS_Data_Init(void);
 static void BMS_Send(TX_BMS Pbuf);
+
 static void Single_Package_Deal(void);
 void Multi_Package_Deal(void);
 #endif
