@@ -17,115 +17,83 @@ u8 xianxing=0;
 enum ElecMeter_status ElecMeterStatus = Link_Start;//µç±íÁ¬½Ó×´Ì¬ÎªÇëÇóÁ¬½Ó×´Ì¬
 uint8_t u8ReadAddrBuff[32] = {0x68,0x00,0x00,0x00,0x00,0x00,0x00,0x68,0x11,0x04,0x00,0x00,0x00,0x00,0X00,0X16};//¿ØÖÆÂë0x11--ÇëÇó¶Áµç±íÊý¾Ý
 
-void RS485_Config(u32 bound)
+//UART 1
+void METER_UART_DMA_Init(void)
 {
-	GPIO_InitTypeDef GPIO_InitStructure;
+	DMA_InitTypeDef DMA_InitStructure;
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);//¿ªÆôDMA2Ê±ÖÓ
+	/*DMA1 Channel 5 triggerd by USART1 Rx event*/
+	DMA_DeInit(DMA1_Channel5);//¸´Î»DMA¿ØÖÆÆ÷µÄÍ¨µÀ
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)RS485_CommandBuff;
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;//ÍâÉè×÷ÎªÊý¾ÝÀ´Ô´
+	DMA_InitStructure.DMA_BufferSize = RS485_CommandBuff_Size;//»º´æ³¤¶È
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//ÍâÉèµØÖ·²»µÝÔö
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;//ÄÚ´æµØÖ·µÝÔö
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//ÍâÉèÊý¾Ý¿í¶È1×Ö½Ú
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//ÄÚ´æÊý¾Ý¿í¶È1×Ö½Ú
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//·ÇÑ­»·Ä£Ê½
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//ÍâÉèÓëÄÚ´æÍ¨Ñ¶£¬¶ø·ÇÄÚ´æµ½ÄÚ´æ
+	DMA_Init(DMA1_Channel5,&DMA_InitStructure);
+	DMA_Cmd (DMA1_Channel5,ENABLE);//Æô¶¯DMA½ÓÊÜ
+	/*DMA1 Channel 4 triggerd by USART1 Tx event*/
+	DMA_DeInit(DMA1_Channel4);//¸´Î»DMA¿ØÖÆÆ÷µÄÍ¨µÀ
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)RS485_CommandBuff;
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;//ÍâÉè×÷Îª´«ËÍÊý¾ÝÄ¿µÄµØ
+	DMA_InitStructure.DMA_BufferSize = 0;//·¢ËÍ³¤¶ÈÎª0£¬Ä¬ÈÏ¹Ø±Õ
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//ÍâÉèµØÖ·²»µÝÔö
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;//ÄÚ´æµØÖ·µÝÔö
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//ÍâÉèÊý¾Ý¿í¶È1×Ö½Ú
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//ÄÚ´æÊý¾Ý¿í¶È1×Ö½Ú
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//·ÇÑ­»·Ä£Ê½
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//ÍâÉèÓëÄÚ´æÍ¨Ñ¶£¬¶ø·ÇÄÚ´æµ½ÄÚ´æ
+	DMA_Init(DMA1_Channel4,	&DMA_InitStructure);
+	//DMA_Cmd (DMA2_Channel5,ENABLE);//Ä¬ÈÏ¹Ø±Õ
+	USART_DMACmd(USART1, USART_DMAReq_Tx|USART_DMAReq_Rx, ENABLE);//Ê¹ÄÜ´®¿ÚDMA·¢ËÍºÍ½ÓÊÜ
+}
+
+void METER_UART_Init(uint32_t bound)
+{
+	GPIO_PinConfigure(GPIOA,10,GPIO_AF_PUSHPULL,GPIO_MODE_OUT10MHZ);//TX-¸´ÓÃÍÆÍìÊä³ö
+	GPIO_PinConfigure(GPIOA,9,GPIO_IN_PULL_DOWN,GPIO_MODE_INPUT);//RX-ÏÂÀ­ÊäÈë
+	GPIO_PinConfigure(RS485_DE_GPIO_PORT,RS485_DE_PIN,GPIO_AF_PUSHPULL,GPIO_MODE_OUT10MHZ);//DEÊ¹ÄÜ½ÅPA8
+	//³õÊ¼»¯´®¿Ú½á¹¹Ìå
 	USART_InitTypeDef USART_InitStructure;
-
-	RCC_APB2PeriphClockCmd(RS485_USART_GPIO_CLK | RS485_DE_GPIO_CLK, ENABLE);//GPIO¿ÚÊ±ÖÓ
-	RCC_APB1PeriphClockCmd(RS485_USART_CLK, ENABLE);		//USARTÍâÉèµÄÊ±ÖÓ
-
-	GPIO_InitStructure.GPIO_Pin = RS485_USART_TX_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(RS485_USART_TX_GPIO_PORT, &GPIO_InitStructure);
-
-	GPIO_InitStructure.GPIO_Pin = RS485_USART_RX_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(RS485_USART_RX_GPIO_PORT, &GPIO_InitStructure);
-
-	GPIO_InitStructure.GPIO_Pin = RS485_DE_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(RS485_DE_GPIO_PORT, &GPIO_InitStructure);
-
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1,ENABLE);//³õÊ¼»¯´®¿ÚÊ±ÖÓ
 	USART_InitStructure.USART_BaudRate = bound;
 	USART_InitStructure.USART_WordLength = USART_WordLength_9b;
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	USART_InitStructure.USART_Parity = USART_Parity_Even ;
-	USART_InitStructure.USART_HardwareFlowControl =USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Parity = USART_Parity_Even;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-	USART_Init(RS485_USARTx, &USART_InitStructure);
-
-  NVIC_InitTypeDef NVIC_InitStructure;
-  NVIC_InitStructure.NVIC_IRQChannel =RS485_USART_IRQ ;
+	USART_Init(USART1, &USART_InitStructure);
+	//ÉèÖÃ´®¿ÚÖÐ¶ÏÓÅÏÈ¼¶
+	NVIC_InitTypeDef NVIC_InitStructure;
+  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-	USART_ITConfig(RS485_USARTx, USART_IT_IDLE, ENABLE);
-  USART_Cmd(RS485_USARTx, ENABLE);
+	USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);//´ò¿ª¿ÕÏÐÖÐ¶Ï,ÓÃÓÚ½ÓÊÕ²»¶¨³¤Êý¾ÝÊ±ÅÐ¶Ï½ÓÊÜÍêÒ»Ö¡Êý¾Ý
+	USART_Cmd(USART1, ENABLE);
 
-	GPIO_ResetBits(RS485_DE_GPIO_PORT,RS485_DE_PIN);//ÊÕ·¢¿ØÖÆÒý½Å
+	RS485_RX_EN();//Ê¹ÄÜ½ÓÊÜ
+	METER_UART_DMA_Init();//³õÊ¼»¯´®¿ÚDMA
 }
-
-// ´®¿Ú3ÖÐ¶Ï
 //ÕâÀïÅäÖÃµÄÊÇ¿ÕÏÐÖÐ¶Ï
-void RS485_USART_IRQHandler(void)
+void USART1_IRQHandler(void)
 {
 	uint8_t Clear=Clear;
-	if(USART_GetITStatus(RS485_USARTx, USART_IT_IDLE) != RESET)
+	if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
 	{
 		Uart_Flag.Meter_Rx_Flag = true;
-		Clear=RS485_USARTx->SR;
-		Clear=RS485_USARTx->DR;
+		Clear=USART1->SR;
+		Clear=USART1->DR;
 	}
-}
-
-void USART3_DMA_send(u8 *SendBuff,u32 size)
-{
-	DMA_InitTypeDef DMA_InitStructure;
-
-	RCC_AHBPeriphClockCmd(USART3_TX_DMA_CLK, ENABLE);
-
-  USART_DMACmd(RS485_USARTx, USART_DMAReq_Tx, ENABLE);
-	DMA_DeInit(USART3_TX_DMA_CHANNEL);
-	DMA_Cmd(USART3_TX_DMA_CHANNEL,DISABLE);
-
-	DMA_InitStructure.DMA_PeripheralBaseAddr = USART3_DR_ADDRESS;
-	DMA_InitStructure.DMA_MemoryBaseAddr = (u32)SendBuff;
-	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-	DMA_InitStructure.DMA_BufferSize = size;
-	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal ;
-	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;
-	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-
-	DMA_Init(USART3_TX_DMA_CHANNEL, &DMA_InitStructure);
-  DMA_ClearFlag(USART3_TX_DMA_FLAG);
-	DMA_Cmd (USART3_TX_DMA_CHANNEL,ENABLE);
-
-	while(DMA_GetCurrDataCounter(USART3_TX_DMA_CHANNEL));
-	while(USART_GetFlagStatus(RS485_USARTx, USART_FLAG_TC) == RESET);
-}
-
-void USART3_DMA_receive(void)
-{
-	DMA_InitTypeDef DMA_InitStructure;
-
-	RCC_AHBPeriphClockCmd(USART3_RX_DMA_CLK, ENABLE);
-
-	DMA_DeInit(USART3_RX_DMA_CHANNEL);// ¸´Î»DMA¿ØÖÆÆ÷µÄÍ¨µÀ
-  USART_DMACmd(RS485_USARTx, USART_DMAReq_Rx, ENABLE);
-
-	DMA_InitStructure.DMA_PeripheralBaseAddr = USART3_DR_ADDRESS;
-	DMA_InitStructure.DMA_MemoryBaseAddr = (u32)RS485_CommandBuff;
-	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-	DMA_InitStructure.DMA_BufferSize = RS485_CommandBuff_Size;
-	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal ;
-	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-
-	DMA_Init(USART3_RX_DMA_CHANNEL, &DMA_InitStructure);
-	DMA_Cmd(USART3_RX_DMA_CHANNEL,ENABLE);
 }
 
 
@@ -133,7 +101,7 @@ void USART3_DMA_receive(void)
 void Check_ElecMeter_Addr(void)
 {
 	uint8_t u8ReadPresentAddrBuff[12]={0x68,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0X68,0X13,0X00,0XDF,0X16};//³õÊ¼µÄµØÖ·£¬¿ØÖÆÂë0x13--¶ÁÍ¨ÐÅµØÖ
-	RS485_DMA_send(u8ReadPresentAddrBuff,12);
+//	RS485_DMA_send(u8ReadPresentAddrBuff,12);
 }
 
 u8 hex_to_ten(u8 number)
@@ -198,7 +166,7 @@ void Send_read_cmd(void)
 			u16Sum = u16Sum + u8ReadAddrBuff[i];
 		}
 		u8ReadAddrBuff[14] = u16Sum & 0x00FF;//Ð£ÑéÎ»
-		RS485_DMA_send(u8ReadAddrBuff,16);//·¢ËÍ±¾´Î¶ÁÈ¡Êý¾ÝµÄÇëÇó
+//		RS485_DMA_send(u8ReadAddrBuff,16);//·¢ËÍ±¾´Î¶ÁÈ¡Êý¾ÝµÄÇëÇó
 }
 
 void Send_485_Data(void)
@@ -249,7 +217,7 @@ void Send_485_Data(void)
 void RS485_DMA_send(u8 *SendBuff,u32 size)
 {
 	RS485_TX_EN();
-	USART3_DMA_send(SendBuff,size);
+//	USART3_DMA_send(SendBuff,size);
 	RS485_RX_EN();
 }
 
@@ -303,8 +271,7 @@ void Deal_YaDa(void)//1sÒ»´Î
 {
 	if(Uart_Flag.Meter_Rx_Flag)
 	{
-		RS485_DataLong = RS485_CommandBuff_Size - DMA_GetCurrDataCounter(USART3_RX_DMA_CHANNEL);
-		USART3_DMA_receive();
+		RS485_DataLong = RS485_CommandBuff_Size - DMA_GetCurrDataCounter(DMA1_Channel5);
 
 		Deal_485_Data();
 		memset(RS485_CommandBuff,0,RS485_DataLong);

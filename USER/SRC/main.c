@@ -2,6 +2,7 @@
 #include "can.h"
 #include "bms.h"
 #include "lcd.h"
+#include "adc.h"
 
 osThreadId MAIN_ID;//ÈÎÎñID
 osThreadId	System_Task_ID;
@@ -39,19 +40,23 @@ int main(void)
 uint16_t kkk;
 static void Timer1_Callback(void const *arg)
 {	
+	//ÄÚ²¿¿´ÃÅ¹·Î¹¹·	RUN_LED 500ms·´×ªÒ»´Î
 	kkk = (kkk+1)%(500/TIMER1_Delay);
 	if(kkk == 1)
 	{
-		GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!GPIO_PinRead(LED_BOARD_PORT,LED_RUN_PIN));//RUN_LED 500s·´×ªÒ»´Î
-		IWDG_ReloadCounter();//ÄÚ²¿¿´ÃÅ¹·Î¹¹·£¡
-		GPIO_PinWrite(GPIOD,2,0);GPIO_PinWrite(GPIOD,2,1);//Íâ²¿Ó²¼ş¿ªÃÅ¹·Î¹¹·£
+		if(Board_Type == 0X0A)	GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!((LED_BOARD_PORT->IDR >> LED_RUN_PIN) & 1));
+			else GPIO_PinWrite(LED_BOARD_PORT,LED3_PIN,!((LED_BOARD_PORT->IDR >> LED3_PIN) & 1));
+		IWDG_ReloadCounter();
 	}
-	DI_Ack.JT 	 = DI_Status_Check(DI_Filter.JT,GPIO_PinRead(JT_PORT,JT_PIN));
-	DI_Ack.START = DI_Status_Check(DI_Filter.START,GPIO_PinRead(START_PORT,START_PIN));
-	DI_Ack.GUN   = DI_Status_Check(DI_Filter.GUN,GPIO_PinRead(K_GUN_ACK_PORT,K_GUN_ACK_PIN));
-	DI_Ack.LOCK  = DI_Status_Check(DI_Filter.LOCK,GPIO_PinRead(LOCK_ACK_PORT,LOCK_ACK_PIN));
-	DI_Ack.KK_H  = DI_Status_Check(DI_Filter.KK_H,GPIO_PinRead(KK_ACK_PORT,KK_ACK_PIN1));
-	DI_Ack.KK_L  = DI_Status_Check(DI_Filter.KK_L,GPIO_PinRead(KK_ACK_PORT,KK_ACK_PIN2));
+	//¶ÁÈ¡ËùÓĞIOÊäÈëĞÅºÅ²¢ÂË²¨
+	DI_Ack.JT 	 = DI_Status_Check(&DI_Filter.JT,		((JT_PORT->IDR >> JT_PIN) & 1));
+	DI_Ack.START = DI_Status_Check(&DI_Filter.START,((START_PORT->IDR >> START_PIN) & 1));
+	DI_Ack.GUN   = DI_Status_Check(&DI_Filter.GUN,	((K_GUN_ACK_PORT->IDR >> K_GUN_ACK_PIN) & 1));
+	DI_Ack.LOCK  = DI_Status_Check(&DI_Filter.LOCK,	((LOCK_ACK_PORT->IDR >> LOCK_ACK_PIN) & 1));
+	DI_Ack.KK_H  = DI_Status_Check(&DI_Filter.KK_H,	((KK_ACK_PORT->IDR >> KK_ACK_PIN1) & 1));
+	DI_Ack.KK_L  = DI_Status_Check(&DI_Filter.KK_L,	((KK_ACK_PORT->IDR >> KK_ACK_PIN2) & 1));
+	//¼ÆËãAD²ÉÑùÖµ
+	Get_Adc_Status();
 }	
 
 
@@ -62,17 +67,20 @@ Control_Type	Type_Control_Cmd;
 CanTxMsg TxMsg_ABC = {0, 0, CAN_Id_Extended, CAN_RTR_Data, 8, {0}};//À©Õ¹Ö¡ Êı¾İÖ¡
 unsigned char Board_C_Sta = 0;//0:C°å²»´æÔÚ 1:C°åÍ¨Ñ¶Õı³£ 0xFF:C°åÍ¨Ñ¶³¬Ê±
 //´¦ÀíAB°åÊı¾İÉÏ±¨µ½C°å
+char gg;
 void System_Task(void const *argument)
 {
 	const unsigned short System_Task_Time = 75U;
 	static unsigned char t,STEP;
-	if(Check_PE())		Type_DM.DErr = Geodesic;//½ÓµØ¹ÊÕÏ
-	if(GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1))	Board_Type  = 0X0A;//¶ÁÈ¡²¦Âë¿ª¹ØµØÖ· È·¶¨A B°å
-		else	{Board_Type  = 0X0B;	Type_DM.DErr = 0;}//½ÓµØ¼ì²éÓÉA°å¼ì²éB°åÎŞ½ÓµØ¹ÊÕÏ
+	
+//	if(Check_PE())		Type_DM.DErr = Geodesic;//½ÓµØ¹ÊÕÏ
+	if(GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1)==0)	{Board_Type  = 0X0B;	Type_DM.DErr = 0;}//¶ÁÈ¡²¦Âë¿ª¹ØµØÖ·:Ä¬ÈÏA	½ÓµØ¼ì²éÓÉA°å¼ì²é	
 	if((DI_Ack.GUN&DI_Ack.KK_H&DI_Ack.KK_H)!=0)	Type_DM.DErr = Relay_Err;//¼ÌµçÆ÷ÎŞ·¨¶Ï¿ª
-	Type_DM.JiTing = 0;//Ä¬ÈÏ¼±Í£Î´°´ÏÂ
+	
 	while(1)
 	{
+				//if(gg)	{ Start_Insulation_Check();gg=0;}
+		
 		if(DI_Ack.JT == 0)	Type_DM.JiTing = 1;//¼±Í£°´Å¥°´ÏÂ
 			else if(DI_Ack.JT == 1)Type_DM.JiTing = 0;
 		
@@ -115,9 +123,10 @@ void System_Task(void const *argument)
 			case 2://µçÑ¹µçÁ÷SOCÖ¡
 			{
 				Type_VolCur.Vol = Data_4608.OutputVolt;//Ä£¿é²âÁ¿
-				Type_VolCur.Cur =	Data_4608.OutputCurr;
+				Type_VolCur.Cur =	4000-Data_4608.OutputCurr;
 				Type_VolCur.Soc = Data_4352.PreSOC;		 //³µ·´À¡
-				Type_VolCur.KW  =	305;//30.5kw
+				Type_VolCur.KWh =	305;//30.5kwh
+				Type_VolCur.CC  = AD_DATA.CC*10;//4v=40
 				STEP = 0;
 			}break;
 			default:break;
@@ -125,8 +134,8 @@ void System_Task(void const *argument)
 		
 		if(Board_C_Sta == 0)//Î´Á¬½ÓC°å²Å×öÏÔÊ¾(¼òÒ×)
 		{
-			t = (t+1)%(1000/System_Task_Time);//ÏÔÊ¾ÈÎÎñ1sË¢ĞÂÒ»´Î
-			//if(t == 1)	LcdShow();		
+			t = (t+1)%(975/System_Task_Time);//ÏÔÊ¾ÈÎÎñ~1sË¢ĞÂÒ»´Î
+			if(t == 1)	LcdShow();
 		}
 		else//Ö»ÒªÁ¬½ÓÁËC°å¾ÍÑ­»··¢ËÍ
 		{

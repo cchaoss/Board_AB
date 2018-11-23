@@ -5,7 +5,7 @@
 /*硬件IO口定义*/
 //LED
 #define LED_BOARD_PORT		GPIOC//板载灯
-#define LED_RUN_PIN				15
+#define LED_RUN_PIN				6
 #define LED3_PIN					7
 #define LED4_PIN					8
 #define LED5_PIN					9
@@ -18,6 +18,8 @@
 #define DIP_SWITCH_PIN1		3
 #define DIP_SWITCH_PORT2	GPIOD//拨码开关2
 #define DIP_SWITCH_PIN2		2
+#define PE_CHECK_PORT			GPIOB//接地检测输入
+#define PE_CHECK_PIN			4
 #define JT_PORT						GPIOC//急停按钮
 #define JT_PIN						5
 #define START_PORT				GPIOA//启停按钮
@@ -48,27 +50,6 @@
 #define BMS_POWER_RELAY_PORT	GPIOC//BMS辅助电源开关
 #define BMS_POWER_RELAY_PIN		14
 
-/*LCD-USART2*/
-#define LCD_USART_TX_PORT       GPIOA   
-#define LCD_USART_TX_PIN        2
-#define LCD_USART_RX_PORT       GPIOA
-#define LCD_USART_RX_PIN        3
-
-#define LCD_USARTx              USART2
-#define LCD_USART_CLK           RCC_APB1Periph_USART2
-#define LCD_USART_APBxClkCmd    RCC_APB1PeriphClockCmd	//UART1挂着APB2其他串口挂着APB1
-
-#define	LCD_USART_IRQ           USART2_IRQn
-#define	LCD_USART_IRQHandler    USART2_IRQHandler
-
-#define	USART2_TX_DMA_CLK			 	RCC_AHBPeriph_DMA1		//DMA1的时钟
-#define	USART2_TX_DMA_CHANNEL		DMA1_Channel7				//串口2 TX对应的DMA请求通道是DMA1的第七通道
-#define	USART2_RX_DMA_CLK			 	RCC_AHBPeriph_DMA1		//DMA1的时钟
-#define	USART2_RX_DMA_CHANNEL  	DMA1_Channel6				//串口2 RX对应的DMA请求通道是DMA1的第六通道
-#define USART2_DR_ADDRESS       (u32)(&(USART2->DR))	// 外设寄存器地址---串口2
-/**/
-
-
 
 #define DI_Filter_Size 3
 //DI信号滤波缓存
@@ -91,18 +72,18 @@ extern DI_Data_Type DI_Filter;
 //DI反馈信号状态
 typedef struct
 {
-	char JT;
-	char START;
-	char GUN;
-	char LOCK;
-	char KK_H;
-	char KK_L;
+	unsigned char JT;
+	unsigned char START;
+	unsigned char GUN;
+	unsigned char LOCK;
+	unsigned char KK_H;
+	unsigned char KK_L;
 }DI_Ack_Flags;
 extern DI_Ack_Flags DI_Ack;
 
 void delay_us(u32 nTimer);
 unsigned char Check_PE(void);
-short DI_Status_Check(_Filter_TYPE	Filter, unsigned char GPIOX_Status);
+unsigned char DI_Status_Check(_Filter_TYPE*	Filter, unsigned char GPIOX_Status);
 void Bsp_init(void);//板级硬件初始化
 
 #endif

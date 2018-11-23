@@ -1,6 +1,7 @@
 #include "main.h"
 #include "bms.h"
 #include "can.h"
+#include "adc.h"
 #include "acdc_module.h"
 
 #pragma pack(1)//强制1字节对齐
@@ -46,26 +47,27 @@ TX_BMS CSD_7424 = {(7424>>8),		6,		 0xf4,		 0x56,		 8,					250,			&Data_7424};//
 TX_BMS CEM_7936 = {(7936>>8),		2,		 0xf4,		 0x56,		 4,					250,			&Data_7936};//充电机错误报文
 float CC = 12;
 unsigned char OUT,guzhang,BMS_STA = BEGIN;
-
-//osMailQDef(BMS_RX_FIFO,6,CanRxMsg);
-//osMailQId	BMS_RX_FIFO_ID;
-//osEvent fifomsg;
-//void gedmail(void)
-//{
-//		 fifomsg = osMailGet(BMS_RX_FIFO_ID,0);
-//	memcpy(CanRxMsg,fifomsg.value,sizeof(CanRxMsg))
-//}
-
+/*
+osMailQDef(BMS_Mail,6,CanRxMsg);
+osMailQId	BMS_Mail_Id;
+osEvent fifomsg;
+*/
 void BMS_Task(void const *argument)
 {
 	const unsigned char BMS_Task_Time = 25U;//10ms循环
 	static unsigned short t,timeout,timeout1;
 	static bool once_run = true;
-	
-//	BMS_RX_FIFO_ID = osMailCreate(osMailQ(BMS_RX_FIFO),osThreadGetId());
-//	osMailCAlloc(BMS_RX_FIFO_ID,0);
+	/*
+	BMS_Mail_Id = osMailCreate(osMailQ(BMS_Mail),NULL);
+	osMailCAlloc(BMS_Mail_Id,0);//初始为0*/
 	while(1)
 	{	
+		/*
+		fifomsg = osMailGet(BMS_Mail_Id,osWaitForever);
+		CanRxMsg *aaa = (CanRxMsg*)event.value.p;
+		//处理数据
+		osMailFree(BMS_Mail_Id,aaa);
+		*/		
 		Single_Package_Deal();//负责接送处理单包数据
 		
 		switch(BMS_STA)//BMS发送处理
@@ -76,7 +78,7 @@ void BMS_Task(void const *argument)
 				//上锁，上锁反馈就绪？//超时5s锁未锁好->结束充电需要再次拔枪	guzhang = Lock_ERR;
 				//辅助电源继电器闭合K3K4
 				//都ok的话->{相关标志位清0，BMS_STA = SEND_9728;}//报文接收标志清0
-				if((CC>3)&&(CC<5))
+				if((AD_DATA.CC>3)&&(AD_DATA.CC<5))
 				{
 					BMS_Data_Init();
 					once_run = true;
@@ -93,6 +95,7 @@ void BMS_Task(void const *argument)
 				if((RX_BMS_TAB[WAIT_9984_BHM].Rx_status == 1)||(timeout > 20))//收到9984||超时5s->GB2015
 				{
 					//if(k1k2接触器电压<10V)//guzhang = Gun_Vol_ERR;//接触器外侧电压>10V//需要重新拔枪
+					Start_Insulation_Check();
 					//if(绝缘监测ok？)//需要电压模块输出电压//guzhang = Insulation_ERR;//绝缘检查错误//停用本桩
 					//if(泄放电路检查ok？)//guzhang = Tap_Check_ERR;//泄放检查错误//停用本桩
 					t = timeout = 0;	
@@ -227,7 +230,7 @@ void BMS_Task(void const *argument)
 				if(t == 0)	ACDC_Set_Vol_Cur(0,0);//电力输出停止操作
 				if((t==200/BMS_Task_Time)||(0))	{once_run = false;	Charge_Close();}//delay200ms(或者电流5A以下)-保护继电器寿命	
 				if(once_run)	t++;	else t = 100;
-				if(CC > 10)	BMS_STA = BEGIN;//必须重新拔枪插抢才可以下一次充电
+				if(AD_DATA.CC > 5.2f)	BMS_STA = BEGIN;//必须重新拔枪插抢才可以下一次充电
 			}break;
 			default:break;
 		}	

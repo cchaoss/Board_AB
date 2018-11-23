@@ -14,18 +14,17 @@ typedef struct
 typedef struct
 {
 	uint16_t P0[2];
+	uint16_t P0_CC[2];
 	uint16_t P1_V[2];
 	uint16_t P1_A[2];
 	uint16_t P1_Soc[2];
 	uint16_t P1_KW[2];
 	uint16_t P1_Time[2];
-	uint16_t P2_STOP[2];
 	uint16_t P2_Exp[2];
-	uint16_t P3_Err[2];
 }Display_Position;
 
 
 extern Uart_Rx_FlagBits Uart_Flag;
-void LCD_USART2_Config(u32 bound);
+void LCD_UART_Init(uint32_t bound);
 void LcdShow(void);
 #endif

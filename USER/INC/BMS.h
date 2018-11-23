@@ -213,4 +213,5 @@ static void BMS_Send(TX_BMS Pbuf);
 
 static void Single_Package_Deal(void);
 void Multi_Package_Deal(void);
+extern osMailQId	BMS_Mail_Id;
 #endif

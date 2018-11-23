@@ -75,9 +75,10 @@ typedef struct
 	uint8_t DSta;		//桩状态：0待机，1充电中，2故障
 	uint8_t DErr;		//桩故障原因：1接地,2模块个数 <1, 3S1234开关无法关闭，4电表无通讯
 	uint8_t MNum;		//A/B本组模块个数
-	uint8_t MErr2;		//模块故障原因sta2
-	uint8_t MErr1;		//模块故障原因sta1
-	uint8_t MErr0;		//模块故障原因sta0
+	uint8_t MErr2;	//模块故障原因sta2
+	uint8_t MErr1;	//模块故障原因sta1
+	uint8_t MErr0;	//模块故障原因sta0
+	
 }Device_Module_Type;
 typedef struct
 {
@@ -87,13 +88,15 @@ typedef struct
 	uint8_t DErr;				//桩故障：锁 外侧电压 绝缘 DC外侧电压与电池电压<5%
 	uint8_t BErr;				//BMS中止原因
 	uint8_t Manual;			//人工中止原因：急停 刷卡 APP 启停按钮
+	//uint16_t ChargTime;	//已充电时间
 }Bms_Type;
 typedef struct
 {
 	uint16_t Vol;	//5505=550.5V
 	uint16_t Cur;	//1205=120.5A
+	uint16_t KWh;	//5505=550.5KW
 	uint8_t  Soc;	//88%
-	uint16_t  KW;	//5505=550.5KW
+	uint8_t   CC;	//CC电压
 }VolCur_Type;
 typedef struct
 {

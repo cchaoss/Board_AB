@@ -133,7 +133,7 @@ void ACDC_Module_Can_Init(void)
 	NVIC_Init(&NVIC_InitStructure);
 }
 
-
+CanRxMsg *bbb;
 /************************BMS中断处理*****************************/
 Can_Rx_FlagBits	RX_Flag;
 CanRxMsg BMS_RX_0;
@@ -141,14 +141,17 @@ void CAN1_RX0_IRQHandler(void)//负责接送多包
 {		
 	CAN_Receive(CAN1, CAN_FIFO0, &BMS_RX_0);
 	Multi_Package_Deal();//处理BMS多包传输
+//	CAN_Receive(CAN1, CAN_FIFO0, &bbb);
+//	osMailPut(BMS_Mail_Id,bbb);
 }
 
 CanRxMsg BMS_RX_1;
 void CAN1_RX1_IRQHandler(void)
 {
-	//if(CAN_MessagePending(CAN1,CAN_FIFO1) > 1)
 	CAN_Receive(CAN1, CAN_FIFO1, &BMS_RX_1);
 	RX_Flag.BMS_Rx_Flag1 = true;
+//	CAN_Receive(CAN1, CAN_FIFO1, &bbb);
+//	osMailPut(BMS_Mail_Id,bbb);
 }
 
 /************************ACDC中断处理***************************/
