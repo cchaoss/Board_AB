@@ -14,11 +14,18 @@
 
 enum _Device_err
 {
-	Geodesic = 1,			//接地故障（只需要检查A）
+	Geodesic = 1,			//接地故障（只需要检查A）*
 	Disconnect_C,			//与C板通讯故障
-	No_Module,				//无电源模块连接
-	Relay_Err,				//本枪继电器状态错误
+	No_Module,				//无电源模块连接				 *
+	Relay_Err,				//本枪继电器状态错误     *
 	Dc_Table_Err,			//本枪直流表无连接
+};
+enum _manual_rea
+{
+	JT_Stop = 1,
+	Start_Stop = 2,
+	App_Stop = 3,
+	Card_Stop = 4,
 };
 enum _Stop_rea
 {
@@ -60,20 +67,14 @@ enum _Err_Bms
 	VolErr = 11,//电压异常
 	VolUnknown=12,//电压不可信
 };
-enum _manual_rea
-{
-	JT_Stop = 1,
-	Card_Stop = 2,
-	App_Stop = 3,
-	Start_Stop = 4,
-};
+
 
 /*A/B<——>C数据交互帧内容*/
 typedef struct
 {
 	uint8_t JiTing;	//急停按钮1按下，0松开
 	uint8_t DSta;		//桩状态：0待机，1充电中，2故障
-	uint8_t DErr;		//桩故障原因：1接地,2模块个数 <1, 3S1234开关无法关闭，4电表无通讯
+	uint8_t DErr;		//桩故障原因
 	uint8_t MNum;		//A/B本组模块个数
 	uint8_t MErr2;	//模块故障原因sta2
 	uint8_t MErr1;	//模块故障原因sta1
@@ -85,10 +86,10 @@ typedef struct
 	uint8_t Step;				//握手 辨识 准备充电 充电中 充电停止
 	uint8_t Stop_Reason;//停止原因：充满 通讯超时 故障 BMS 人工
 	uint8_t time_out;		//超时原因
-	uint8_t DErr;				//桩故障：锁 外侧电压 绝缘 DC外侧电压与电池电压<5%
+	uint8_t DErr;				//桩故障：锁 外侧电压 绝缘 DC外侧电压与电池电压<5% 继电器错误
 	uint8_t BErr;				//BMS中止原因
-	uint8_t Manual;			//人工中止原因：急停 刷卡 APP 启停按钮
-	//uint16_t ChargTime;	//已充电时间
+	uint8_t Manual;			//人工中止原因：1急停 2启停 3APP 4刷卡
+	uint16_t RemaChargTime;//剩余充电时间0-600min
 }Bms_Type;
 typedef struct
 {

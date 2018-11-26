@@ -46,5 +46,5 @@ extern unsigned char insulation_flag;
 
 void ADCx_Init(void);
 void Get_Adc_Status(void);
-void Start_Insulation_Check(void);
+void Start_Insulation_Check(unsigned char Cmd);
 #endif	

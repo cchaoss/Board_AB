@@ -60,18 +60,16 @@ void ADCx_Init(void)
 }
 
 AD_VALUE AD_DATA;
-unsigned int temp[CHANNEL_NUM];
 unsigned char insulation_flag;
-
-float VT = 0;
-float VTCalibrate[2];
+float VTCalibrate[2];//保存的绝缘检查校准值
 //float t1,t2，g1,g2;
-
 void Get_Adc_Status(void)
 {
 	static char count = 0;
 	static bool once = true;
+	static unsigned int temp[CHANNEL_NUM] = {0};
 	unsigned short gg = 0;
+	float VT = 0;
 	if(count == 6)
 	{
 		if(once)//保存绝缘检查的校准值
@@ -98,17 +96,12 @@ void Get_Adc_Status(void)
 					VT = (AD_DATA.VT1-VTCalibrate[0])/(-VT)*847.5;
 				}
 				if((gg < 200)||(VT < 500))	AD_DATA.VT_Return = 1;//绝缘检查错误！
-				
-				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
-				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//关闭绝缘检查继电器
-				insulation_flag = 0;
 			}
 		}
 		AD_DATA.CC	= temp[2]/6*CC_K;//3.3V基准
 //		AD_DATA.T1 	= temp[3]/6;
 //		AD_DATA.T2 	= temp[4]/6;
-		for(char i=0;i<CHANNEL_NUM;i++)
-			temp[i] = 0;
+		for(char i=0;i<CHANNEL_NUM;i++)	temp[i] = 0;
 		count = 0;
 	}
 	else
@@ -123,10 +116,20 @@ void Get_Adc_Status(void)
 //	LPF_1_(10,0.02f,ADC_RAW_DATA[4],t2);
 }
 
-void Start_Insulation_Check(void)
+//开始绝缘检查
+void Start_Insulation_Check(unsigned char Cmd)
 {
-	insulation_flag = 1;
-	AD_DATA.VT_Return = 0;//清除绝缘错误
-	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
-	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);
+	if(Cmd == 1)
+	{
+		insulation_flag = 1;
+		AD_DATA.VT_Return = 0;//清除绝缘错误
+		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
+		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);
+	}
+	else
+	{
+		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
+		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//关闭绝缘检查继电器
+		insulation_flag = 0;
+	}
 }

@@ -35,7 +35,7 @@
 #define LOCK_GUN_PORT	GPIOB//枪锁控制
 #define LOCK_GUN_PIN1	15
 #define LOCK_GUN_PIN2	14
-#define K_GUN_PORT	GPIOB//枪上继电器控制
+#define K_GUN_PORT	GPIOB//枪继电器控制
 #define K_GUN_PIN		2
 #define KK_PORT			GPIOB//中间继电器控制
 #define KK_PIN1			0		 //+

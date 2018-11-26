@@ -1,6 +1,7 @@
 #include "lcd.h"
 #include "bms.h"
 #include "main.h"
+#include "adc.h"
 #include "acdc_module.h"
 
 #define LCD_RX_DMA DMA2_Channel3
@@ -145,7 +146,7 @@ void Check_Hand(void)
 	LCD_DMA_Reset(LCD_TX_DMA,6);//复位DMA发送首地址
 }
 												/* P0			 P0_CC		  P1_V			P1_A		  P1_SOC	P1_KW 		 P1_TIME		P2_EXP*/
-Display_Position SHOW = {{150,70},{122,275},{100,188},{100,217},{86,139},{100,244},{122,275},{256,58}};
+Display_Position SHOW = {{150,70},{122,275},{100,188},{100,217},{86,139},{100,244},{125,275},{256,58}};
 			
 unsigned char Link_ok = 0;//LCD屏连接状态1连接 0未连接
 unsigned char LCD_DataLong;
@@ -166,6 +167,7 @@ void LcdShow(void)
 	{
 		if((Type_DM.DErr==Geodesic)||(Type_DM.DErr==No_Module)||(Type_DM.DErr==Relay_Err))//桩自检错误(这里是针对简易桩显示3个内容)
 		{
+			GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,1);//故障灯亮起
 			switch_page(3);
 			switch(Type_DM.DErr)//notes:Disconnect_C Dc_Table_Err	(简易桩不显示) 
 			{
@@ -179,21 +181,30 @@ void LcdShow(void)
 		{
 			switch(Type_BMS.Step)
 			{
-				case BEGIN:			switch_page(0);Show_hanzi("请插充电枪",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case BEGIN:			
+				{
+					GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,0);//故障灯熄灭
+					switch_page(0);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
+					if(Type_DM.JiTing == 1)	Show_hanzi("急停已按下！",12,SHOW.P0[0],SHOW.P0[1]-8);
+						else if((AD_DATA.CC>3)&&(AD_DATA.CC<5))	Show_hanzi("请按下启停健",12,SHOW.P0[0],SHOW.P0[1]-8);
+							else Show_hanzi("请插充电枪",10,SHOW.P0[0],SHOW.P0[1]);
+				}break;
 				case SEND_9728:	switch_page(0);Show_hanzi("充电握手中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
 				case SEND_256:	switch_page(0);Show_hanzi("充电辨识中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
 				case SEND_2048:	switch_page(0);Show_hanzi(" BMS准备"  ,9 ,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
 				case SEND_2560:	switch_page(0);Show_hanzi("充电机准备",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;	
 				case SEND_4608:	
-				case SEND_6656:				
+				case SEND_6656:
+					GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,1);//充电灯亮起
 					switch_page(1);
 					show_number(Type_VolCur.Soc,SHOW.P1_Soc[0],SHOW.P1_Soc[1],3,0);//SOC
 					show_number(Type_VolCur.Vol,SHOW.P1_V[0],SHOW.P1_V[1],4,1);//电压
 					show_number(Type_VolCur.Cur,SHOW.P1_A[0],SHOW.P1_A[1],4,1);//电流 
 					show_number(Type_VolCur.KWh,SHOW.P1_KW[0],SHOW.P1_KW[1],4,1);//电量(连接电表才显示)
-					show_number(Data_4352.RemaChargTime++,SHOW.P1_Time[0],SHOW.P1_Time[1],4,0);//剩余时间
+					show_number(Data_4352.RemaChargTime,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//剩余时间
 					break;
 				case STOP:
+					GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,0);//充电灯熄灭
 					switch_page(2);
 					switch(Type_BMS.Stop_Reason)
 					{
@@ -201,15 +212,16 @@ void LcdShow(void)
 							Show_hanzi(" 通讯超时",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.time_out)
 							{
-								case BRM512_Timeout:	Show_hanzi("   512" ,6,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCP1536_Timeout:	Show_hanzi("   1536",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BRO2304_Timeout:	Show_hanzi("   2304",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCS4352_Timeout:	Show_hanzi("   4352",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCL4096_Timeout:	Show_hanzi("   4096",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BST6400_Timeout:	Show_hanzi("   6400",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BRM512_Timeout:	Show_hanzi("    512" ,7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCP1536_Timeout:	Show_hanzi("    1536",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BRO2304_Timeout:	Show_hanzi("    2304",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCS4352_Timeout:	Show_hanzi("    4352",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCL4096_Timeout:	Show_hanzi("    4096",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BST6400_Timeout:	Show_hanzi("    6400",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;
 							}break;
 						case Err_Stop:
+							GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,1);//故障灯亮起
 							Show_hanzi(" 故障停止",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.DErr)
 							{
@@ -239,10 +251,10 @@ void LcdShow(void)
 							Show_hanzi(" 人工中止",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.Manual)
 							{
-								case JT_Stop:			Show_hanzi("  急停开关",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case JT_Stop:			Show_hanzi(" 急停按下！",11,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case Card_Stop:		Show_hanzi("  刷卡停止",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case App_Stop:		Show_hanzi("   App停止",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case Start_Stop:	Show_hanzi("  启停按下",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case Start_Stop:	Show_hanzi("  启停开关",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;
 							}break;
 					}break;

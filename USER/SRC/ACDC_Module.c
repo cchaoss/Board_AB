@@ -17,6 +17,7 @@ void ACDC_Module_Task(void const *argument)
 	{
 		ACDC_RxMsg_Deal();//处理模块应答的数据
 		
+		//if(ACDC_STA < Read_Status)	Type_DM.DErr = No_Module;//故障：无电源模块！
 		switch(ACDC_STA)
 		{
 			case Set_Group:
@@ -40,11 +41,7 @@ void ACDC_Module_Task(void const *argument)
 					if(Module_Rx_Flag.A_num)
 					{
 						Module_Rx_Flag.A_num = false;
-						if(Module_Status.numA == 0)	
-						{
-							Type_DM.DErr = No_Module;//故障：无电源模块！
-							ACDC_STA = Set_Group;//重新开始
-						}							
+						if(Module_Status.numA == 0)	ACDC_STA = Set_Group;//重新开始							
 						else 
 						{
 							Type_DM.MNum = Module_Rx_Flag.A_num;
@@ -58,11 +55,7 @@ void ACDC_Module_Task(void const *argument)
 					if(Module_Rx_Flag.B_num)
 					{
 						Module_Rx_Flag.B_num = false;
-						if(Module_Status.numB == 0)	
-						{
-							Type_DM.DErr = No_Module;//故障：无电源模块！
-							ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
-						}
+						if(Module_Status.numB == 0)	ACDC_STA = Read_Status;//至少有一个模块就可以正常工作
 						else
 						{
 							Type_DM.MNum = Module_Rx_Flag.B_num;

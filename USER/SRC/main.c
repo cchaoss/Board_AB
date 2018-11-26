@@ -75,11 +75,12 @@ void System_Task(void const *argument)
 	
 //	if(Check_PE())		Type_DM.DErr = Geodesic;//接地故障
 	if(GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1)==0)	{Board_Type  = 0X0B;	Type_DM.DErr = 0;}//读取拨码开关地址:默认A	接地检查由A板检查	
-	if((DI_Ack.GUN&DI_Ack.KK_H&DI_Ack.KK_H)!=0)	Type_DM.DErr = Relay_Err;//继电器无法断开
 	
 	while(1)
 	{
-				//if(gg)	{ Start_Insulation_Check();gg=0;}
+		if((DI_Ack.GUN!=0xFF)&&(DI_Ack.GUN!=((K_GUN_PORT->IDR>>K_GUN_PIN)&1)))	Type_DM.DErr = Relay_Err;
+		if((DI_Ack.KK_H!=0xFF)&&(DI_Ack.KK_H!=((KK_PORT->IDR>>KK_PIN1)&1)))			Type_DM.DErr = Relay_Err;
+		if((DI_Ack.KK_L!=0xFF)&&(DI_Ack.KK_L!=((KK_PORT->IDR>>KK_PIN2)&1)))			Type_DM.DErr = Relay_Err;//继电器错误
 		
 		if(DI_Ack.JT == 0)	Type_DM.JiTing = 1;//急停按钮按下
 			else if(DI_Ack.JT == 1)Type_DM.JiTing = 0;
@@ -118,6 +119,7 @@ void System_Task(void const *argument)
 							else if(Data_6400.BMSStopChargingReason&0x08)	Type_BMS.BErr = VolUnknown;//电压不可信
 				if((Data_6400.BMSStopChargingReason&0x05)||(Data_4352.PreSOC>=98))	Type_BMS.BErr = Soc_Full;//充满停止(达到所需SOC)	
 //				if(Type_DM.JiTing == 1)	Type_BMS.Manual = JT;//3种情况在情况发生代码段赋值是否好些？
+				Type_BMS.RemaChargTime = Data_4352.RemaChargTime;//0-600min
 				STEP = 2;
 			}break;
 			case 2://电压电流SOC帧
@@ -126,7 +128,7 @@ void System_Task(void const *argument)
 				Type_VolCur.Cur =	4000-Data_4608.OutputCurr;
 				Type_VolCur.Soc = Data_4352.PreSOC;		 //车反馈
 				Type_VolCur.KWh =	305;//30.5kwh
-				Type_VolCur.CC  = AD_DATA.CC*10;//4v=40
+				Type_VolCur.CC  = AD_DATA.CC*10;//4.5v=45
 				STEP = 0;
 			}break;
 			default:break;
