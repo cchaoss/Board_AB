@@ -38,7 +38,7 @@ void LCD_UART_Init(uint32_t bound)
 
 	USART_ITConfig(UART4, USART_IT_IDLE, ENABLE);//打开空闲中断,用于接收不定长数据时判断接受完一帧数据
 	USART_Cmd(UART4, ENABLE);
-	USART_ClearFlag(UART4, USART_FLAG_TC);
+	//USART_ClearFlag(UART4, USART_FLAG_TC);
 	/*配置UART4 的DMA TX RX*/
 	DMA_InitTypeDef DMA_InitStructure;
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);//开启DMA2时钟
@@ -53,7 +53,7 @@ void LCD_UART_Init(uint32_t bound)
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//外设数据宽度1字节
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//内存数据宽度1字节
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//非循环模式
-	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//外设与内存通讯，而非内存到内存
 	DMA_Init(DMA2_Channel3,&DMA_InitStructure);
 	DMA_Cmd (DMA2_Channel3,ENABLE);//启动DMA接受
@@ -68,7 +68,7 @@ void LCD_UART_Init(uint32_t bound)
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//外设数据宽度1字节
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//内存数据宽度1字节
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//非循环模式
-	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//外设与内存通讯，而非内存到内存
 	DMA_Init(DMA2_Channel5,	&DMA_InitStructure);
 	//DMA_Cmd (DMA2_Channel5,ENABLE);//默认关闭
@@ -89,11 +89,12 @@ void UART4_IRQHandler(void)
 
 void LCD_DMA_Reset(DMA_Channel_TypeDef* DMAy_Channelx, unsigned char len)
 {
+	//USART_ClearFlag(UART4, USART_FLAG_TC);
 	DMA_Cmd (DMAy_Channelx,DISABLE);//要先关闭DMA才能设置长度
 	DMAy_Channelx->CNDTR = len;			//重新设置开始地址
 	DMA_Cmd (DMAy_Channelx,ENABLE); //启动DMA发送
 }
-/*************************************************************************/
+
 unsigned char End_of_package[4] = {0xcc,0x33,0xc3,0x3c};//固定包尾
 unsigned char Head_number[7] = {0xAA,0x14,0x03,0xff,0xff,0x00,0x00};//不显示背景色 无符号数 无效不显示 大小8*16 
 unsigned char Head_string[7] = {0xAA,0x11,0x02,0xff,0xff,0x00,0x00};//不显示背景色 8*16 字符颜色 背景颜色
@@ -104,27 +105,28 @@ void show_number(unsigned int number,unsigned short x,unsigned short y,unsigned 
 	memcpy(LCD_Tx_Buffer,Head_number,sizeof(Head_number));
 	LCD_Tx_Buffer[7] = num1;//整数位数
 	LCD_Tx_Buffer[8] = num2;//小数位数
-	LCD_Tx_Buffer[9] = (x&0xff00)>>8;
-  LCD_Tx_Buffer[10]= x&0x00ff;
-	LCD_Tx_Buffer[11]= (y&0xff00)>>8;
-  LCD_Tx_Buffer[12]= y&0x00ff;		
-	LCD_Tx_Buffer[13]= (number>>24);
-	LCD_Tx_Buffer[14]= (number>>16)&0x00ff;			
-	LCD_Tx_Buffer[15]= (number&0xff00)>>8;
-	LCD_Tx_Buffer[16]= (number&0x00ff);		
+	LCD_Tx_Buffer[9] = x>>8;
+  LCD_Tx_Buffer[10]= x;
+	LCD_Tx_Buffer[11]= y>>8;
+  LCD_Tx_Buffer[12]= y;		
+	LCD_Tx_Buffer[13]= number>>24;
+	LCD_Tx_Buffer[14]= number>>16;			
+	LCD_Tx_Buffer[15]= number>>8;
+	LCD_Tx_Buffer[16]= number;		
 	memcpy(&LCD_Tx_Buffer[17],End_of_package,sizeof(End_of_package));
-
+	
 	LCD_DMA_Reset(LCD_TX_DMA,21);
 	while(DMA_GetCurrDataCounter(LCD_TX_DMA));//贼烦
+	//while(RESET == USART_GetFlagStatus(UART4, USART_FLAG_TC));//这个比上面DMAcounter要耗时长一些！
 }
 //显示字符跟数字的xy坐标是反的
 void Show_hanzi(unsigned char *hanzi,unsigned char size,unsigned short y,unsigned short x)
 {
 	memcpy(LCD_Tx_Buffer,Head_string,sizeof(Head_string));
-	LCD_Tx_Buffer[7] = (x&0xff00)>>8;
-  LCD_Tx_Buffer[8] = x&0x00ff;
-	LCD_Tx_Buffer[9] = (y&0xff00)>>8;
-  LCD_Tx_Buffer[10]= y&0x00ff;																									
+	LCD_Tx_Buffer[7] = x>>8;
+  LCD_Tx_Buffer[8] = x;
+	LCD_Tx_Buffer[9] = y>>8;
+  LCD_Tx_Buffer[10]= y;																									
 	for(char i=0;i<(size);i++)	LCD_Tx_Buffer[11+i] = hanzi[i];//汉字存储区域
 	memcpy(&LCD_Tx_Buffer[size+11],End_of_package,sizeof(End_of_package));
 	
@@ -145,17 +147,15 @@ void Check_Hand(void)
 	memcpy(LCD_Tx_Buffer,Hand,sizeof(Hand));
 	LCD_DMA_Reset(LCD_TX_DMA,6);//复位DMA发送首地址
 }
+		
 												/* P0			 P0_CC		  P1_V			P1_A		  P1_SOC	P1_KW 		 P1_TIME		P2_EXP*/
-Display_Position SHOW = {{150,70},{122,275},{100,188},{100,217},{86,139},{100,244},{125,275},{256,58}};
-			
+Display_Position SHOW = {{150,70},{122,275},{100,188},{100,217},{86,139},{100,244},{125,275},{256,58}};		
 unsigned char Link_ok = 0;//LCD屏连接状态1连接 0未连接
-unsigned char LCD_DataLong;
-unsigned char qqq = 1;
 void LcdShow(void)
 {
 	if(Uart_Flag.Lcd_Rx_Flag)
 	{
-		LCD_DataLong = LCD_RX_SIZE - DMA_GetCurrDataCounter(LCD_RX_DMA);
+		unsigned char LCD_DataLong = LCD_RX_SIZE - DMA_GetCurrDataCounter(LCD_RX_DMA);
 		if((LCD_Rx_Buffer[0]==0xAA)&&(LCD_Rx_Buffer[1]==0x00)&&(LCD_Rx_Buffer[2]==0x4F)&&(LCD_Rx_Buffer[3]==0x4B))
 			Link_ok = 1;//LCD设备存在
 		memset(LCD_Rx_Buffer,0,LCD_DataLong);
@@ -165,15 +165,16 @@ void LcdShow(void)
 
 	if(Link_ok)
 	{
-		if((Type_DM.DErr==Geodesic)||(Type_DM.DErr==No_Module)||(Type_DM.DErr==Relay_Err))//桩自检错误(这里是针对简易桩显示3个内容)
+		if(Type_DM.DErr!=0)//桩自检错误(这里是针对简易桩显示3个内容)
 		{
 			GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,1);//故障灯亮起
 			switch_page(3);
-			switch(Type_DM.DErr)//notes:Disconnect_C Dc_Table_Err	(简易桩不显示) 
+			switch(Type_DM.DErr)
 			{
 				case Geodesic:		Show_hanzi(" 接地故障",9,SHOW.P0[0],SHOW.P0[1]);break;
 				case No_Module:		Show_hanzi("无电源模块",10,SHOW.P0[0],SHOW.P0[1]);break;
-				case Relay_Err:		Show_hanzi("继电器故障",10,SHOW.P0[0],SHOW.P0[1]);break;
+				case Dc_Table_Err:Show_hanzi("无直流电表",10,SHOW.P0[0],SHOW.P0[1]);break;
+				case Disconnect_C:Show_hanzi("C板通讯故障",11,SHOW.P0[0],SHOW.P0[1]);break;
 				default:break;
 			}
 		}
@@ -200,7 +201,7 @@ void LcdShow(void)
 					show_number(Type_VolCur.Soc,SHOW.P1_Soc[0],SHOW.P1_Soc[1],3,0);//SOC
 					show_number(Type_VolCur.Vol,SHOW.P1_V[0],SHOW.P1_V[1],4,1);//电压
 					show_number(Type_VolCur.Cur,SHOW.P1_A[0],SHOW.P1_A[1],4,1);//电流 
-					show_number(Type_VolCur.KWh,SHOW.P1_KW[0],SHOW.P1_KW[1],4,1);//电量(连接电表才显示)
+					show_number(Type_VolCur.KWh,SHOW.P1_KW[0],SHOW.P1_KW[1],4,1);//电量:电表数据或者定时器累加
 					show_number(Data_4352.RemaChargTime,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//剩余时间
 					break;
 				case STOP:
@@ -226,6 +227,8 @@ void LcdShow(void)
 							switch(Type_BMS.DErr)
 							{
 								case Lock_ERR:			Show_hanzi("  无法上锁",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case GUN_Relay_Err:	Show_hanzi("枪上继电器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
+								case KK_Relay_Err:	Show_hanzi("中间继电器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case Insulation_ERR:Show_hanzi("  绝缘错误",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case Bat_Vol_ERR:		Show_hanzi("电池电压异常",12,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;

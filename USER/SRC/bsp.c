@@ -3,6 +3,8 @@
 #include "can.h"
 #include "lcd.h"
 #include "adc.h"
+#include "acdc_module.h"
+#include "electric_meter.h"
 
 static void DIDO_init(void)
 {
@@ -20,7 +22,6 @@ static void DIDO_init(void)
 	GPIO_PinConfigure(LOCK_ACK_PORT,LOCK_ACK_PIN,GPIO_IN_PULL_DOWN,GPIO_MODE_INPUT);//锁反馈输入
 	GPIO_PinConfigure(KK_ACK_PORT,KK_ACK_PIN2,GPIO_IN_PULL_DOWN,GPIO_MODE_INPUT);//中间继电器火线反馈输入
 	GPIO_PinConfigure(KK_ACK_PORT,KK_ACK_PIN1,GPIO_IN_PULL_DOWN,GPIO_MODE_INPUT);//中间继电器底线反馈输入
-	
 
 	//控制继电器DO
 	GPIO_PinConfigure(LOCK_GUN_PORT,LOCK_GUN_PIN1,GPIO_OUT_PUSH_PULL,GPIO_MODE_OUT2MHZ);
@@ -42,7 +43,9 @@ static void DIDO_init(void)
 	
 	//上电配置所有开关断开
 	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,0);
-	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,0);//打开锁
+	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,1);
+	delay_us(100000);//100ms
+	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,0);//打开锁
 	GPIO_PinWrite(K_GUN_PORT,K_GUN_PIN,0);//关闭枪上继电器
 	GPIO_PinWrite(KK_PORT,KK_PIN1,0);
 	GPIO_PinWrite(KK_PORT,KK_PIN2,0);//关闭中间继电器
@@ -65,20 +68,42 @@ static void IWDG_Init(uint8_t Prescaler ,uint16_t Reload)
 	IWDG->KR = (uint16_t)0xCCCC;
 }
 
-void Bsp_init(void)
+unsigned short ChargTime;//充电计费时间，现在是使用 TIM2进行计时，每30S加1
+float dianliang;
+void Tim2_Init(unsigned short Psc,unsigned short Arr)
 {
-	//Notes:1.system_stm32f10x.c 1036行修改晶振8821 stm32F10x.h 122行25M改为8M
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);//嵌套向量中断控制器组选择，中断分组
-	DIDO_init();//初始化硬件IO
-	BMS_Can_Init();//初始化与BMS通讯的CAN口
-	ACDC_Module_Can_Init();//初始化与电源模块通讯的CAN口
+	NVIC_InitTypeDef NVIC_InitStructure;
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;	
 	
-	ADCx_Init();
-	LCD_UART_Init(435200);//初始化LCD屏幕串口	244800	870400
+	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn ;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+		
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
+	TIM_TimeBaseStructure.TIM_Prescaler= Psc-1;
+	TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
+	TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
+	TIM_TimeBaseStructure.TIM_Period=Arr-1;
+	TIM_TimeBaseStructure.TIM_RepetitionCounter=0;
 	
-	IWDG_Init(IWDG_Prescaler_64 ,1250);//Tout=(4*2^Prescaler*Reload)/40单位:ms 这里是2s溢出
+	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+	TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+	TIM_ITConfig(TIM2,TIM_IT_Update,ENABLE);
+	TIM_Cmd(TIM2, ENABLE);	
+	ChargTime = 0;
 }
 
+void TIM2_IRQHandler(void)
+{
+	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	{	
+		TIM_ClearITPendingBit(TIM2, TIM_FLAG_Update);  	
+		ChargTime++;
+		dianliang += Module_Status.Output_Vol * Module_Status.Output_Cur / 120 / 1000;//算出已充电量(kwh度) = 电压*电流*时间(小时)/1000
+	}
+}
 
 DI_Ack_Flags DI_Ack;
 DI_Data_Type DI_Filter;
@@ -120,12 +145,25 @@ unsigned char Check_PE(void)
 //误差5%
 void delay_us(u32 nTimer)
 {
-	u32 i=0;
-	for(i=0;i<nTimer;i++){
+	for(u32 i=0;i<nTimer;i++){
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();//__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();//for语句也需要时间
 	}
+}
+
+void Bsp_init(void)
+{
+	//Notes:1.system_stm32f10x.c 1036行修改晶振8821 stm32F10x.h 122行25M改为8M
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);//嵌套向量中断控制器组选择，中断分组
+	DIDO_init();//初始化硬件IO
+	BMS_Can_Init();//初始化与BMS通讯的CAN口
+	ACDC_Module_Can_Init();//初始化与电源模块通讯的CAN口
+	
+	ADCx_Init();
+	LCD_UART_Init(435200);//初始化LCD屏幕串口	244800	870400
+	METER_UART_Init(9600);//初始化电表485串口 
+	IWDG_Init(IWDG_Prescaler_64 ,1250);//Tout=(4*2^Prescaler*Reload)/40单位:ms 这里是2s溢出
 }

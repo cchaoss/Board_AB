@@ -17,8 +17,7 @@ enum _Device_err
 	Geodesic = 1,			//接地故障（只需要检查A）*
 	Disconnect_C,			//与C板通讯故障
 	No_Module,				//无电源模块连接				 *
-	Relay_Err,				//本枪继电器状态错误     *
-	Dc_Table_Err,			//本枪直流表无连接
+	Dc_Table_Err,			//本枪直流表无连接(联网版本)
 };
 enum _manual_rea
 {
@@ -48,10 +47,12 @@ enum _Timeout_Bms
 enum _guzhang
 {
 	Lock_ERR = 1,//无法上锁
-//	Gun_Vol_ERR=2,//枪端电压>10V
-	Insulation_ERR=3,//绝缘检测错误
-//	Tap_Check_ERR=4,//泄放检查错误
-	Bat_Vol_ERR=5,//电池电压与报文偏差过大
+	GUN_Relay_Err = 2,//本枪继电器状态错误
+	KK_Relay_Err  = 3,//中间继电器错误
+//	Gun_Vol_ERR = 4,//枪端电压>10V
+//	Tap_Check_ERR=5,//泄放检查错误
+	Insulation_ERR= 6,//绝缘检测错误
+	Bat_Vol_ERR = 7,//电池电压与报文偏差过大
 };
 enum _Err_Bms
 {
@@ -101,8 +102,8 @@ typedef struct
 }VolCur_Type;
 typedef struct
 {
-	uint8_t A_Start_Stop;//0X00关闭A枪，0X01暂停，0X02开启
-	uint8_t B_Start_Stop;//0X00关闭B枪，0X01暂停，0X02开启
+	uint8_t Start_Stop;		//0X00关闭A枪，0X01暂停，0X02开启
+	uint8_t Type;					//0x01 APP启停 0x02 刷卡启停
 	uint8_t Module_Assign;//0XAB各自用本组模块，0XAA全部模块给A枪用，0XBB全部模块给B枪用
 }Control_Type;
 extern Bms_Type	Type_BMS;
@@ -111,7 +112,7 @@ extern Device_Module_Type Type_DM;
 extern Control_Type	Type_Control_Cmd;
 
 extern unsigned char Board_Type;//A B板定义0X0A 0X0B
-
+extern unsigned char Board_C_Sta;//AB板与C板连接状态：0无连接 1 连接正常 FF通讯超时重连
 static void ABC_Data_Deal(unsigned short Task_Time);
 static void Timer1_Callback(void const *arg);
 void System_Task(void const *argument);

@@ -72,12 +72,7 @@ void Get_Adc_Status(void)
 	float VT = 0;
 	if(count == 6)
 	{
-		if(once)//保存绝缘检查的校准值
-		{
-			once = false;
-			VTCalibrate[0] = temp[0]/6;
-			VTCalibrate[1] = temp[1]/6;
-		}
+		if(once){once = false;VTCalibrate[0] = temp[0]/6;VTCalibrate[1] = temp[1]/6;}//保存绝缘检查的校准值
 		if(insulation_flag)
 		{
 			if(insulation_flag++>1)//确保电压稳定后在检查值（继电器闭合会出现波动）
@@ -117,19 +112,10 @@ void Get_Adc_Status(void)
 }
 
 //开始绝缘检查
-void Start_Insulation_Check(unsigned char Cmd)
+void Start_Insulation_Check(void)
 {
-	if(Cmd == 1)
-	{
-		insulation_flag = 1;
-		AD_DATA.VT_Return = 0;//清除绝缘错误
-		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
-		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);
-	}
-	else
-	{
-		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
-		GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//关闭绝缘检查继电器
-		insulation_flag = 0;
-	}
+	insulation_flag = 1;
+	AD_DATA.VT_Return = 0;//清除绝缘错误
+	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
+	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);
 }

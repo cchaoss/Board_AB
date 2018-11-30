@@ -207,7 +207,6 @@ extern stuPGN6400Type Data_6400;
 extern stuPGN7936Type Data_7936;
 extern unsigned char guzhang,BMS_STA;
 static void ACDC_Set_Vol_Cur(short vol, short cur);
-static void Charge_Close(void);
 static void BMS_Data_Init(void);
 static void BMS_Send(TX_BMS Pbuf);
 

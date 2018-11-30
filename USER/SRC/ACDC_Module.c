@@ -7,7 +7,7 @@ ACDC_Status Module_Status;//电源模块的个数 温度 状态 电压电流
 Module_Rx_Flag_Bits	Module_Rx_Flag;//电源模块报文接收标记
 CanTxMsg TxMsg_ACDC = {0, 0, CAN_Id_Extended, CAN_RTR_Data, 8, {0}};//扩展帧 数据帧
 
-unsigned char ACDC_STA = Set_Group;
+enum _ACDC_STA ACDC_STA = Set_Group;
 void ACDC_Module_Task(void const *argument)
 {
 	const unsigned short ACDC_Module_Task_Time = 125U;
@@ -145,11 +145,11 @@ static void ACDC_RxMsg_Deal(void)
 			if((ACDC_RX.ExtId >= Single_Module_Sta_Ack)&&(ACDC_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
 			{
 				memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取所有模块组号 温度 状态
+				Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
+				Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
+				Type_DM.MErr0 = Module_Sta_Ack_type.sta0;//模块状态位
 				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态是否正常
 				{
-					Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
-					Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
-					Type_DM.MErr0 = Module_Sta_Ack_type.sta0;
 					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
 					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
 				}

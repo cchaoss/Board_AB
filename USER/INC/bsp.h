@@ -80,7 +80,10 @@ typedef struct
 	unsigned char KK_L;
 }DI_Ack_Flags;
 extern DI_Ack_Flags DI_Ack;
+extern unsigned short ChargTime;//Ã¿30S¼Ó1
+extern float dianliang;
 
+void Tim2_Init(unsigned short Psc,unsigned short Arr);
 void delay_us(u32 nTimer);
 unsigned char Check_PE(void);
 unsigned char DI_Status_Check(_Filter_TYPE*	Filter, unsigned char GPIOX_Status);
