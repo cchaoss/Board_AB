@@ -56,6 +56,7 @@ static void DIDO_init(void)
 	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//关闭绝缘检查relay
 	GPIO_PinWrite(XIEFANG_RELAY_PORT,XIEFANG_RELAY_PIN,0);//关闭泄放检查relay
 	GPIO_PinWrite(BMS_POWER_RELAY_PORT,BMS_POWER_RELAY_PIN,0);//关闭辅助电源
+	GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,0);//失联灯5默认熄灭
 }
 
 //note:Reload <=4095
@@ -76,7 +77,7 @@ void Tim2_Init(unsigned short Psc,unsigned short Arr)
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;	
 	
 	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn ;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
@@ -164,6 +165,6 @@ void Bsp_init(void)
 	
 	ADCx_Init();
 	LCD_UART_Init(435200);//初始化LCD屏幕串口	244800	870400
-	METER_UART_Init(9600);//初始化电表485串口 
+	METER_UART_Init(2400);//初始化电表485串口 2400 9600
 	IWDG_Init(IWDG_Prescaler_64 ,1250);//Tout=(4*2^Prescaler*Reload)/40单位:ms 这里是2s溢出
 }

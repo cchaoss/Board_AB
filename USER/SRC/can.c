@@ -1,6 +1,6 @@
 #include "can.h"
 #include "bms.h"
-#include "cmsis_os.h"
+
 
 //初始化BMS_CAN口:CAN1
 void BMS_Can_Init(void)  
@@ -103,18 +103,18 @@ void ACDC_Module_Can_Init(void)
 	CAN_FilterInitStructure.CAN_FilterIdLow = (uint16_t)(((0x0000F000U<<3)|CAN_RTR_DATA|CAN_ID_EXT)&0x0000ffff);
 	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = 0x0000;
 	CAN_FilterInitStructure.CAN_FilterMaskIdLow = (uint16_t)(0xff00U<<3);
-	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = CAN_FilterFIFO0;//过滤器0关联到FIFO0
+	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = CAN_FilterFIFO0;//过滤器14关联到FIFO0
 	CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
 	CAN_FilterInit(&CAN_FilterInitStructure);
 		//配置CAN过滤组1 -> FIFO1
 	CAN_FilterInitStructure.CAN_FilterNumber = 15;//指定过滤器组0-13
 	CAN_FilterInitStructure.CAN_FilterMode = CAN_FilterMode_IdMask;//指定过滤器为标识符屏蔽位模式
 	CAN_FilterInitStructure.CAN_FilterScale = CAN_FilterScale_32bit;//指定过滤器位宽为32位
-	CAN_FilterInitStructure.CAN_FilterIdHigh = (uint16_t)(((0xC0000ABCU<<3)&0xffff0000)>>16);//板间数据传输地址后3位固定ABC
-	CAN_FilterInitStructure.CAN_FilterIdLow = (uint16_t)(((0xC0000ABCU<<3)|CAN_RTR_DATA|CAN_ID_EXT)&0x0000ffff);//AB板只对来自C板的数据接受
-	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = (uint16_t)(0xf000U<<3);
-	CAN_FilterInitStructure.CAN_FilterMaskIdLow = (uint16_t)(0x0fffU<<3);
-	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = CAN_FilterFIFO1;//过滤器1关联到FIFO1
+	CAN_FilterInitStructure.CAN_FilterIdHigh = (uint16_t)(((0x0ABC00C0U<<3)&0xffff0000)>>16);//板间数据传输地址前3位固定ABC
+	CAN_FilterInitStructure.CAN_FilterIdLow = (uint16_t)(((0x0ABC00C0U<<3)|CAN_RTR_DATA|CAN_ID_EXT)&0x0000ffff);//AB板只对来自C板的数据接受
+	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = (uint16_t)(0x0fffU<<3);
+	CAN_FilterInitStructure.CAN_FilterMaskIdLow = (uint16_t)(0x00f0U<<3);
+	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = CAN_FilterFIFO1;//过滤器15关联到FIFO1
 	CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
 	CAN_FilterInit(&CAN_FilterInitStructure);
 	
@@ -122,12 +122,12 @@ void ACDC_Module_Can_Init(void)
 	
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = CAN2_RX0_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;           
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 	NVIC_InitStructure.NVIC_IRQChannel = CAN2_RX1_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;           
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);

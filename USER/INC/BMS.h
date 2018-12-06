@@ -39,10 +39,6 @@ typedef struct
 {
 	uint8_t Rx_status;			//接受到对应报文将此位置1
 	uint8_t PGN_S;					//报文PGN
-//	uint8_t IFArbition;			//优先级 保留位 数据页
-//	uint8_t PDUSpecific;		//目的地址
-//	uint8_t SourceAddress;	//源地址
-//	uint8_t DLC;						//数据长度
 	void *Data;
 }RX_BMS;  	
 
@@ -205,7 +201,8 @@ extern stuPGN4608Type Data_4608;
 extern stuPGN6656Type Data_6656;
 extern stuPGN6400Type Data_6400;
 extern stuPGN7936Type Data_7936;
-extern unsigned char guzhang,BMS_STA;
+extern unsigned char guzhang;
+extern enum _BMS_STA BMS_STA;
 static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void BMS_Data_Init(void);
 static void BMS_Send(TX_BMS Pbuf);

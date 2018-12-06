@@ -77,18 +77,10 @@ void METER_UART_Init(uint32_t bound)
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//ÍâÉèÊı¾İ¿í¶È1×Ö½Ú
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//ÄÚ´æÊı¾İ¿í¶È1×Ö½Ú
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//·ÇÑ­»·Ä£Ê½
-	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//ÍâÉèÓëÄÚ´æÍ¨Ñ¶£¬¶ø·ÇÄÚ´æµ½ÄÚ´æ
 	DMA_Init(DMA1_Channel4,	&DMA_InitStructure);
 	//DMA_Cmd (DMA1_Channel4,ENABLE);//Ä¬ÈÏ¹Ø±Õ
-
-//  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
-//  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-//  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-//  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-//  NVIC_Init(&NVIC_InitStructure);
-
-//	DMA_ITConfig(DMA1_Channel4,DMA_IT_TC,ENABLE);//¿ªÆôDMA·¢ËÍÍê³ÉÖĞ¶Ï
 	USART_DMACmd(USART1, USART_DMAReq_Tx|USART_DMAReq_Rx, ENABLE);//Ê¹ÄÜ´®¿ÚDMA·¢ËÍºÍ½ÓÊÜ
 }
 
@@ -104,12 +96,13 @@ void USART1_IRQHandler(void)
 	if(USART_GetITStatus(USART1,USART_IT_TC) != RESET)
 	{
 		USART_ClearFlag(USART1, USART_FLAG_TC);
-		RS485_RX_EN();
+		RS485_RX_EN();//485½ÓÊÕ
 	}
 }
 
 void METER_DMA_Reset(DMA_Channel_TypeDef* DMAy_Channelx, unsigned char len)
 {
+	RS485_TX_EN();//485·¢ËÍ
 	DMA_Cmd (DMAy_Channelx,DISABLE);//ÒªÏÈ¹Ø±ÕDMA²ÅÄÜÉèÖÃ³¤¶È
 	DMAy_Channelx->CNDTR = len;			//ÖØĞÂÉèÖÃ¿ªÊ¼µØÖ·
 	DMA_Cmd (DMAy_Channelx,ENABLE); //Æô¶¯DMA·¢ËÍ
@@ -119,7 +112,6 @@ unsigned char ReadAddrCmd[12]={0x68,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0X68,0X13,0X00
 static void Check_ElecMeter_Addr(void)
 {
 	memcpy(METER_Tx_Buffer,ReadAddrCmd,12);
-	RS485_TX_EN();
 	METER_DMA_Reset(METER_TX_DMA,12);
 }
 
@@ -135,7 +127,6 @@ static void Send_read_cmd(unsigned char type)
 	for(char i=0; i<14; i++)	Sum += METER_Tx_Buffer[i];
 	METER_Tx_Buffer[14] = Sum&0x00FF;//Ğ£ÑéÎ»
 	METER_Tx_Buffer[15] = 0x16;//°üÎ²
-	RS485_TX_EN();
 	METER_DMA_Reset(METER_TX_DMA,16);
 }
 
@@ -151,57 +142,42 @@ unsigned char hex_to_ten(unsigned char number)//BCDÂë(Ê®Áù½øÖÆ)×ª»»ÎªÊ®½øÖÆÊı£¬À
 	return (((number&0xf0)>>1) + ((number&0xf0)>>3) + (number&0x0f));
 }
 
-unsigned int array_x_min[4]= {1,100,10000,1000000};
-void Save_485_Data(void)
-{
-	float lData = 0;
-	for(char i=0;i<(METER_Rx_Buffer[13]-4);i++)
-	{
-		lData = lData + hex_to_ten(METER_Rx_Buffer[18+i]-0x33)*array_x_min[i];
-	}
-	lData = lData * xianxing_cmd[Cmd_Step].ratio;//±£´æÊı¾İ
-	Cmd_Step = (Cmd_Step+1)%3;
-	if((METER_Rx_Buffer[15]==0x33) && (METER_Rx_Buffer[16]==0x34) && (METER_Rx_Buffer[17]==0x33))
-			MeterData.kwh = lData;//ÕıÏòÕû¹¦
-	else if((METER_Rx_Buffer[15]==0x34) && (METER_Rx_Buffer[16]==0x34) && (METER_Rx_Buffer[17]==0x35))
-		MeterData.vol = lData;//µçÑ¹
-	else if((METER_Rx_Buffer[15]==0x34) && (METER_Rx_Buffer[16]==0x35) && (METER_Rx_Buffer[17]==0x35))
-		MeterData.cur = lData;//µçÁ÷
-}
-
-
-
 void Send_485_Data(void)
 {
-	static unsigned char t;
+	static unsigned char t,t1;
+	static bool run_once = true;
+
 	if(MeterSta == No_Link)//µç±íÊÇ¶ÏÏß×´Ì¬
 	{
-		if(++t > 2)//¼ä¸ôÊ±¼ä·¢ËÍ²éÑ¯ĞÅÏ¢
+		if((++t1 >10)&&run_once)//10sÄÚ2400Á¬½Ó²»ÉÏ×Ô¶¯ÇĞ»»µ½9600²¢±£³Ö
 		{
-			t = 0;
-			Check_ElecMeter_Addr();//·¢ĞÅºÅ²éÑ¯µç±íµØÖ·
+			run_once = false;
+			METER_UART_Init(9600);//³¢ÊÔÒÔ9600²¨ÌØÂÊ¸úµç±íÍ¨Ñ¶
 		}
+		Check_ElecMeter_Addr();//·¢ĞÅºÅ²éÑ¯µç±íµØÖ·
 	}
 	else if(MeterSta == ReadData)//ÇëÇó¶ÁÊı¾İ
 	{
 		t = 0;
+		Cmd_Step = (Cmd_Step+1)%3;//ÕıÏò×Ü¹¦->µçÑ¹->µçÁ÷
 		Send_read_cmd(Cmd_Step);//·¢ËÍ¶ÁÈ¡Êı¾İµÄÇëÇó//ÕıÏò¹¦/µçÑ¹/µçÁ÷
-		MeterSta = WaitData;//×´Ì¬ÇĞ»»ÎªµÈ´ıµç±íÊı¾İ×´Ì¬
+		MeterSta = WaitData;
 	}
 	else if(MeterSta == WaitData)//µç±íµÈ´ıµç±íÊı¾İ×´Ì¬
 	{
 		if(++t > 5)//³¬Ê±5s
 		{
 			t = 0;
+			run_once = false;//Ö¤Ã÷²¨ÌØÂÊÕıÈ·£¬¶ÏÏß×´Ì¬²»ÔÙÇĞ»»²¨ÌØÂÊ
 			MeterSta = No_Link;//µç±íÀëÏß£¬³¢ÊÔÖØĞÂÁ¬½Ó
 		}
 	}
-	else if(MeterSta == AskData)//ÇëÇóµç±íÊı¾İ(ĞèµÈ´ıÒ»¶¨Ê±¼äºó²ÅÄÜ»ñÈ¡)
-		MeterSta = ReadData;//×´Ì¬±äÎª·¢ËÍµç±íµØÖ·
 }
 
+unsigned int array_x_min[4]= {1,100,10000,1000000};
 void Deal_485_Data(void)
 {
+	float lData = 0;
 	unsigned short Sum = 0;
 	if(MeterSta == No_Link)
 	{
@@ -218,8 +194,12 @@ void Deal_485_Data(void)
 			for(char i=4;i<RS485_DataLong-2;i++)	Sum += METER_Rx_Buffer[i];		
 			if((uint8_t)Sum == METER_Rx_Buffer[RS485_DataLong-2])//Ğ£ÑéÂëÕıÈ·
 			{				
-				Save_485_Data();
-				MeterSta = AskData;//×´Ì¬ÇĞ»»ÎªÇëÇóµç±íÊı¾İĞèµÈ´ıÒ»¶¨Ê±¼äºó²ÅÄÜ»ñÈ¡
+				for(char i=0;i<(METER_Rx_Buffer[13]-4);i++)	{lData = lData + hex_to_ten(METER_Rx_Buffer[18+i]-0x33)*array_x_min[i];}
+				lData = lData * xianxing_cmd[Cmd_Step].ratio;
+				if((METER_Rx_Buffer[15]==0x33)&&(METER_Rx_Buffer[16]==0x34)&&(METER_Rx_Buffer[17]==0x33))	MeterData.kwh_realtime = lData;//ÕıÏòÕû¹¦
+					else if((METER_Rx_Buffer[15]==0x34)&&(METER_Rx_Buffer[16]==0x34)&&(METER_Rx_Buffer[17]==0x35))	 MeterData.vol = lData;//µçÑ¹
+						else if((METER_Rx_Buffer[15]==0x34)&&(METER_Rx_Buffer[16]==0x35)&&(METER_Rx_Buffer[17]==0x35)) MeterData.cur = lData;//µçÁ÷			
+				MeterSta = ReadData;//×´Ì¬ÇĞ»»ÎªÇëÇóµç±íÊı¾İĞèµÈ´ıÒ»¶¨Ê±¼äºó²ÅÄÜ»ñÈ¡
 			}
 		}
 	}
@@ -236,5 +216,11 @@ void Read_ElectricMeter_Data(void)//1sÒ»´Î
 		memset(METER_Rx_Buffer,0,RS485_DataLong);
 		Uart_Flag.Meter_Rx_Flag = false;
 	}
-	else Send_485_Data();//Î´ÊÕµ½ĞÂµÄ´®¿ÚÖ¸ÁîÔò¸ù¾İµç±í×´Ì¬·¢ËÍ²»Í¬µÄÖ¸Áî
+	else Send_485_Data();
+	
+	if(Board_C_Sta != 0)//Ö»ÓĞÁ¬½ÓÁËC°å²Å½«µç±í×÷Îª±ØÒªÉè±¸
+	{
+		if(MeterSta == No_Link)	Type_DM.DErr |= Dc_Table_Err;//µç±íÊÇ¶ÏÏß×´Ì¬
+			else Type_DM.DErr &= ~Dc_Table_Err;//Á¬ÉÏµç±í
+	}
 }

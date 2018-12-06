@@ -3,6 +3,7 @@
 #include "main.h"
 #include "adc.h"
 #include "acdc_module.h"
+#include "electric_meter.h"
 
 #define LCD_RX_DMA DMA2_Channel3
 #define LCD_TX_DMA DMA2_Channel5
@@ -31,7 +32,7 @@ void LCD_UART_Init(uint32_t bound)
 	//设置串口中断优先级
 	NVIC_InitTypeDef NVIC_InitStructure;
   NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -68,7 +69,7 @@ void LCD_UART_Init(uint32_t bound)
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//外设数据宽度1字节
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//内存数据宽度1字节
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//非循环模式
-	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//外设与内存通讯，而非内存到内存
 	DMA_Init(DMA2_Channel5,	&DMA_InitStructure);
 	//DMA_Cmd (DMA2_Channel5,ENABLE);//默认关闭
@@ -96,8 +97,8 @@ void LCD_DMA_Reset(DMA_Channel_TypeDef* DMAy_Channelx, unsigned char len)
 }
 
 unsigned char End_of_package[4] = {0xcc,0x33,0xc3,0x3c};//固定包尾
-unsigned char Head_number[7] = {0xAA,0x14,0x03,0xff,0xff,0x00,0x00};//不显示背景色 无符号数 无效不显示 大小8*16 
-unsigned char Head_string[7] = {0xAA,0x11,0x02,0xff,0xff,0x00,0x00};//不显示背景色 8*16 字符颜色 背景颜色
+unsigned char Head_number[7] = {0xAA,0x14,0x02,0xff,0xff,0x00,0x00};//不显示背景色 无符号数 无效不显示 大小10*20 
+unsigned char Head_string[7] = {0xAA,0x11,0x02,0xff,0xff,0x00,0x00};//不显示背景色 10*20 字符颜色 背景颜色
 unsigned char Page[8] = {0xAA,0x22,0x00,0x00,0xCC,0x33,0xC3,0x3C};//切换页面指令
 unsigned char Hand[6] = {0xAA,0x00,0xCC,0x33,0xC3,0x3C};//握手指令
 void show_number(unsigned int number,unsigned short x,unsigned short y,unsigned char num1,unsigned char num2)
@@ -147,9 +148,9 @@ void Check_Hand(void)
 	memcpy(LCD_Tx_Buffer,Hand,sizeof(Hand));
 	LCD_DMA_Reset(LCD_TX_DMA,6);//复位DMA发送首地址
 }
-		
+
 												/* P0			 P0_CC		  P1_V			P1_A		  P1_SOC	P1_KW 		 P1_TIME		P2_EXP*/
-Display_Position SHOW = {{150,70},{122,275},{100,188},{100,217},{86,139},{100,244},{125,275},{256,58}};		
+Display_Position SHOW = {{138,70},{127,293},{102,212},{102,239},{90,141},{102,266},{122,293},{238,58}};		
 unsigned char Link_ok = 0;//LCD屏连接状态1连接 0未连接
 void LcdShow(void)
 {
@@ -169,14 +170,10 @@ void LcdShow(void)
 		{
 			GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,1);//故障灯亮起
 			switch_page(3);
-			switch(Type_DM.DErr)
-			{
-				case Geodesic:		Show_hanzi(" 接地故障",9,SHOW.P0[0],SHOW.P0[1]);break;
-				case No_Module:		Show_hanzi("无电源模块",10,SHOW.P0[0],SHOW.P0[1]);break;
-				case Dc_Table_Err:Show_hanzi("无直流电表",10,SHOW.P0[0],SHOW.P0[1]);break;
-				case Disconnect_C:Show_hanzi("C板通讯故障",11,SHOW.P0[0],SHOW.P0[1]);break;
-				default:break;
-			}
+			if(Type_DM.DErr&Geodesic)	Show_hanzi(" 接地故障",9,SHOW.P0[0],SHOW.P0[1]);
+				else if(Type_DM.DErr&No_Module)	Show_hanzi("无电源模块",10,SHOW.P0[0],SHOW.P0[1]);
+					else if(Type_DM.DErr&Disconnect_C)	Show_hanzi("C板通讯故障",11,SHOW.P0[0],SHOW.P0[1]);
+						else if(Type_DM.DErr&Dc_Table_Err)	Show_hanzi("无直流电表",10,SHOW.P0[0],SHOW.P0[1]);
 		}
 		else//桩自检通过
 		{
@@ -185,10 +182,15 @@ void LcdShow(void)
 				case BEGIN:			
 				{
 					GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,0);//故障灯熄灭
-					switch_page(0);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
+					switch_page(0);
+					show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
 					if(Type_DM.JiTing == 1)	Show_hanzi("急停已按下！",12,SHOW.P0[0],SHOW.P0[1]-8);
 						else if((AD_DATA.CC>3)&&(AD_DATA.CC<5))	Show_hanzi("请按下启停健",12,SHOW.P0[0],SHOW.P0[1]-8);
 							else Show_hanzi("请插充电枪",10,SHOW.P0[0],SHOW.P0[1]);
+					
+					if(MeterSta != No_Link)	Show_hanzi("M",1,301,226);//连上电表
+					if(Board_Type == 0X0A)	Show_hanzi("A",1,301,4);else	Show_hanzi("B",1,300,5);//简易桩要使用A板，这里显示方便生产辨别！
+						
 				}break;
 				case SEND_9728:	switch_page(0);Show_hanzi("充电握手中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
 				case SEND_256:	switch_page(0);Show_hanzi("充电辨识中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
@@ -202,9 +204,12 @@ void LcdShow(void)
 					show_number(Type_VolCur.Vol,SHOW.P1_V[0],SHOW.P1_V[1],4,1);//电压
 					show_number(Type_VolCur.Cur,SHOW.P1_A[0],SHOW.P1_A[1],4,1);//电流 
 					show_number(Type_VolCur.KWh,SHOW.P1_KW[0],SHOW.P1_KW[1],4,1);//电量:电表数据或者定时器累加
-					show_number(Data_4352.RemaChargTime,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//剩余时间
+					show_number(Data_4608.ChargingTime,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//充电时间
+					if((Type_DM.MErr2&0x7f)!=0)	{Show_hanzi("模块告警Sta2:",13,182,49);	show_number(Type_DM.MErr2,169,182,3,0);}//判断模块状态不正常
+						else if((Type_DM.MErr1&0xbe)!=0)	{Show_hanzi("模块告警Sta1:",13,182,49);	show_number(Type_DM.MErr1,169,182,3,0);}
+							else if((Type_DM.MErr0&0x11)!=0)	{Show_hanzi("模块告警Sta0:",13,182,49);	show_number(Type_DM.MErr0,169,182,3,0);}				
 					break;
-				case STOP:
+				case STOP
 					GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,0);//充电灯熄灭
 					switch_page(2);
 					switch(Type_BMS.Stop_Reason)
@@ -213,12 +218,12 @@ void LcdShow(void)
 							Show_hanzi(" 通讯超时",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.time_out)
 							{
-								case BRM512_Timeout:	Show_hanzi("    512" ,7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCP1536_Timeout:	Show_hanzi("    1536",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BRO2304_Timeout:	Show_hanzi("    2304",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCS4352_Timeout:	Show_hanzi("    4352",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BCL4096_Timeout:	Show_hanzi("    4096",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BST6400_Timeout:	Show_hanzi("    6400",8,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BRM512_Timeout:	Show_hanzi("   512" ,6,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BCP1536_Timeout:	Show_hanzi("   1536",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BRO2304_Timeout:	Show_hanzi("   2304",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BCS4352_Timeout:	Show_hanzi("   4352",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BCL4096_Timeout:	Show_hanzi("   4096",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BST6400_Timeout:	Show_hanzi("   6400",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
 								default:break;
 							}break;
 						case Err_Stop:
@@ -237,12 +242,12 @@ void LcdShow(void)
 							Show_hanzi(" BMS中止",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.BErr)
 							{
-								case Soc_Full:			Show_hanzi("  已充满！",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case Soc_Full:			Show_hanzi("已充满！！",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case Insulation:		Show_hanzi("  绝缘故障",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case BmsOutNetTemp:	Show_hanzi("输出连接器过温",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-8);break;
-								case ChargeNet:			Show_hanzi("充电连接器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-8);break;
+								case BmsOutNetTemp:	Show_hanzi("输出连接器过温",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
+								case ChargeNet:			Show_hanzi("充电连接器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case BatTemp:				Show_hanzi("电池温度过高",12,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case HighRelay:			Show_hanzi("高压继电器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-8);break;
+								case HighRelay:			Show_hanzi("高压继电器故障",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case Vol_2:					Show_hanzi(" 点2电压错误",12,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case CurOver:				Show_hanzi("  电流过大",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case CurUnknown:		Show_hanzi("  电流不可信",12,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;

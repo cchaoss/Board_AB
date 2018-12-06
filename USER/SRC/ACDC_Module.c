@@ -17,7 +17,8 @@ void ACDC_Module_Task(void const *argument)
 	{
 		ACDC_RxMsg_Deal();//处理模块应答的数据
 		
-		//if(ACDC_STA < Read_Status)	Type_DM.DErr = No_Module;//故障：无电源模块！
+		//if(ACDC_STA < Read_Status)	Type_DM.DErr |= No_Module;//故障：无电源模块！
+		//	else Type_DM.DErr &= ~No_Module;
 		switch(ACDC_STA)
 		{
 			case Set_Group:
@@ -148,11 +149,11 @@ static void ACDC_RxMsg_Deal(void)
 				Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
 				Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
 				Type_DM.MErr0 = Module_Sta_Ack_type.sta0;//模块状态位
-				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态是否正常
-				{
-					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
-					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
-				}
+//				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态不正常
+//				{
+//					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
+//					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
+//				}
 			}
 		}
 		else if(Board_Type == 0x0B)

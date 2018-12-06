@@ -27,12 +27,13 @@ typedef struct
 
 typedef struct
 {
-	float kwh;
+	float kwh_start;
+	float kwh_realtime;
 	float vol;
 	float cur;
 }Meter_Data_Type;
 extern Meter_Data_Type MeterData;
-
+extern enum _ElecMeter_status MeterSta;
 void Read_ElectricMeter_Data(void);
 void METER_UART_Init(uint32_t bound);
 

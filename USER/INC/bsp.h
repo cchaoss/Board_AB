@@ -18,6 +18,10 @@
 #define DIP_SWITCH_PIN1		3
 #define DIP_SWITCH_PORT2	GPIOD//拨码开关2
 #define DIP_SWITCH_PIN2		2
+#define DIP_SWITCH_PORT3	GPIOC//拨码开关3
+#define DIP_SWITCH_PIN3		12
+#define DIP_SWITCH_PORT4	GPIOA//拨码开关4
+#define DIP_SWITCH_PIN4		15
 #define PE_CHECK_PORT			GPIOB//接地检测输入
 #define PE_CHECK_PIN			4
 #define JT_PORT						GPIOC//急停按钮

@@ -15,9 +15,9 @@
 enum _Device_err
 {
 	Geodesic = 1,			//接地故障（只需要检查A）*
-	Disconnect_C,			//与C板通讯故障
-	No_Module,				//无电源模块连接				 *
-	Dc_Table_Err,			//本枪直流表无连接(联网版本)
+	Disconnect_C = 2,			//与C板通讯故障
+	No_Module = 4,				//无电源模块连接				 *
+	Dc_Table_Err = 8,			//本枪直流表无连接(联网版本)
 };
 enum _manual_rea
 {
@@ -106,6 +106,16 @@ typedef struct
 	uint8_t Type;					//0x01 APP启停 0x02 刷卡启停
 	uint8_t Module_Assign;//0XAB各自用本组模块，0XAA全部模块给A枪用，0XBB全部模块给B枪用
 }Control_Type;
+/************************/
+typedef struct
+{
+	char Bits_1:1;
+	char Bits_2:1;
+	char Bits_3:1;
+	char Bits_4:1;
+	char reserved:4;
+}DIPSwitchBits;
+extern DIPSwitchBits DIPSwitch;
 extern Bms_Type	Type_BMS;
 extern VolCur_Type	Type_VolCur;
 extern Device_Module_Type Type_DM;
@@ -120,4 +130,3 @@ void BMS_Task(void const *argument);
 void ACDC_Module_Task(void const *argument); 
 
 #endif
-
