@@ -69,10 +69,16 @@ void ACDC_Module_Task(void const *argument)
 			
 			case Read_Status://读取模块状态
 			{	
-				if(Board_Type == 0x0A)//A板子负责轮询所有模块状态 温度信息
+				if(Board_Type == 0x0A)//轮询A组所有模块状态 温度信息
 				{	
 					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//读取模块状态/温度/组号
-					if(++number==Module_Status.num)	number = 0;
+					if(++number==Module_Status.numA)	number = 0;
+					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
+				}
+				if(Board_Type == 0x0B)//轮询A组所有模块状态 温度信息
+				{	
+					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//读取模块状态/温度/组号
+					if(++number==Module_Status.numB)	number = 0;
 					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
 				}
 				ACDC_STA =	Read_Vol_Cur;
@@ -88,26 +94,52 @@ void ACDC_Module_Task(void const *argument)
 			
 			case Set_Vol_Cur://设置电压电流 开关机
 			{
+				if(Board_C_Sta == 0)	Type_Control_Cmd.Module_Assign = 0XAA;//没有连接C板时 A板可以控制所有模块//没有连接C板时 A板可以控制所有模块
 				if(ACDC_VolCur_Buffer[3] != 0)//电压不为0
 				{
-					if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = Set_GroupA_Vol_Cur;
-					else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = Set_GroupB_Vol_Cur;
+					if(Board_Type == 0x0A)	
+					{
+						if(Type_Control_Cmd.Module_Assign == 0xAA)	TxMsg_ACDC.ExtId = Set_Total_Vol_Cur;//设置所有模块输出电压电流
+							else TxMsg_ACDC.ExtId = Set_GroupA_Vol_Cur;//设置A组模块输出电压电流
+					}
+					else if(Board_Type == 0x0B)	
+					{
+						if(Type_Control_Cmd.Module_Assign == 0xBB)	TxMsg_ACDC.ExtId = Set_Total_Vol_Cur;//设置所有模块输出电压电流
+							else TxMsg_ACDC.ExtId = Set_GroupB_Vol_Cur;//设置B组模块输出电压电流
+					}
 					memcpy(TxMsg_ACDC.Data,ACDC_VolCur_Buffer,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
-					if(Module_Rx_Flag.ON_OFF_STA)//开机一次
+					
+					if(Module_Rx_Flag.ON_OFF_STA)/*关过机才开机一次*/
 					{
 						Module_Rx_Flag.ON_OFF_STA = false;
-						if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;
-						else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;
+						if(Board_Type == 0x0A)	
+						{
+							if(Type_Control_Cmd.Module_Assign == 0xAA) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块开机
+							 else TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;//A组模块开机
+						}
+						else if(Board_Type == 0x0B)	
+						{
+							if(Type_Control_Cmd.Module_Assign == 0xBB) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块开机
+							 else TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;//B组模块开机
+						}
 						memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);//0为开机
 					}
 				}
 				else//电压为0则执行关机
 				{
-					if(!Module_Rx_Flag.ON_OFF_STA)//开过机才关机一次
+					if(!Module_Rx_Flag.ON_OFF_STA)/*开过机才关机一次*/
 					{
 						Module_Rx_Flag.ON_OFF_STA = true;
-						if(Board_Type == 0x0A)	TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;
-						else if(Board_Type == 0x0B)	TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;
+						if(Board_Type == 0x0A)	
+						{
+							if(Type_Control_Cmd.Module_Assign == 0xAA) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
+								else TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;//A组模块关机
+						}
+						else if(Board_Type == 0x0B)	
+						{
+							if(Type_Control_Cmd.Module_Assign == 0xBB) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
+							 else TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;//B组模块关机
+						}
 						memset(TxMsg_ACDC.Data,0,8);					
 						TxMsg_ACDC.Data[0] = 1;	CAN_Transmit(CAN2, &TxMsg_ACDC);//1为关机
 					}

@@ -46,17 +46,16 @@ static void DIDO_init(void)
 	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,1);
 	delay_us(100000);//100ms
 	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,0);//打开锁
-	GPIO_PinWrite(K_GUN_PORT,K_GUN_PIN,0);//关闭枪上继电器
-	GPIO_PinWrite(KK_PORT,KK_PIN1,0);
-	GPIO_PinWrite(KK_PORT,KK_PIN2,0);//关闭中间继电器
 	GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,0);
 	GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,0);//充电/故障灯熄灭
 	GPIO_PinWrite(PE_RELAY_PORT,PE_RELAY_PIN,0);			//关闭接地检测relay
 	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
 	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//关闭绝缘检查relay
 	GPIO_PinWrite(XIEFANG_RELAY_PORT,XIEFANG_RELAY_PIN,0);//关闭泄放检查relay
-	GPIO_PinWrite(BMS_POWER_RELAY_PORT,BMS_POWER_RELAY_PIN,0);//关闭辅助电源
 	GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,0);//失联灯5默认熄灭
+	Open_K1K2;//断开枪上继电器
+	Open_K3K4;//关闭辅助电源
+	Open_KK;//断开中间继电器
 }
 
 //note:Reload <=4095
@@ -86,7 +85,7 @@ void Tim2_Init(unsigned short Psc,unsigned short Arr)
 	TIM_TimeBaseStructure.TIM_Prescaler= Psc-1;
 	TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
 	TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
-	TIM_TimeBaseStructure.TIM_Period=Arr-1;
+	TIM_TimeBaseStructure.TIM_Period= Arr-1;
 	TIM_TimeBaseStructure.TIM_RepetitionCounter=0;
 	
 	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);

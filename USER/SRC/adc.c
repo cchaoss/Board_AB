@@ -92,7 +92,7 @@ void Get_Adc_Status(void)
 				}
 				if((gg < 200)||(VT < 500*0.2f))	AD_DATA.VT_Return = 1;//绝缘检查错误！100-500欧/V报警可以充电 这里取200欧/V*500=100k以下报警不能充电
 			}
-		}
+		}/*以上为绝缘检查*/
 		AD_DATA.CC	= temp[2]/6*CC_K;//3.3V基准
 //		AD_DATA.T1 	= temp[3]/6;
 //		AD_DATA.T2 	= temp[4]/6;

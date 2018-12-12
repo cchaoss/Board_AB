@@ -168,7 +168,7 @@ void Send_485_Data(void)
 		if(++t > 5)//超时5s
 		{
 			t = 0;
-			run_once = false;//证明波特率正确，断线状态不再切换波特率
+			run_once = false;//证明波特率正确，只是断线而已，不再切换波特率
 			MeterSta = No_Link;//电表离线，尝试重新连接
 		}
 	}
@@ -199,7 +199,7 @@ void Deal_485_Data(void)
 				if((METER_Rx_Buffer[15]==0x33)&&(METER_Rx_Buffer[16]==0x34)&&(METER_Rx_Buffer[17]==0x33))	MeterData.kwh_realtime = lData;//正向整功
 					else if((METER_Rx_Buffer[15]==0x34)&&(METER_Rx_Buffer[16]==0x34)&&(METER_Rx_Buffer[17]==0x35))	 MeterData.vol = lData;//电压
 						else if((METER_Rx_Buffer[15]==0x34)&&(METER_Rx_Buffer[16]==0x35)&&(METER_Rx_Buffer[17]==0x35)) MeterData.cur = lData;//电流			
-				MeterSta = ReadData;//状态切换为请求电表数据需等待一定时间后才能获取
+				MeterSta = ReadData;
 			}
 		}
 	}

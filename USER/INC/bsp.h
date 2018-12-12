@@ -54,6 +54,12 @@
 #define BMS_POWER_RELAY_PORT	GPIOC//BMS辅助电源开关
 #define BMS_POWER_RELAY_PIN		14
 
+#define Close_K3K4	GPIO_PinWrite(BMS_POWER_RELAY_PORT,BMS_POWER_RELAY_PIN,1);//闭合辅助电源继电器
+#define Open_K3K4		GPIO_PinWrite(BMS_POWER_RELAY_PORT,BMS_POWER_RELAY_PIN,0);//断开辅助电源继电器
+#define Close_K1K2	GPIO_PinWrite(K_GUN_PORT,K_GUN_PIN,1);//闭合枪上主继电器K1K2
+#define Open_K1K2		GPIO_PinWrite(K_GUN_PORT,K_GUN_PIN,0);//断开枪上主继电器K1K2
+#define Close_KK		GPIO_PinWrite(KK_PORT,KK_PIN1,1);GPIO_PinWrite(KK_PORT,KK_PIN2,1);//闭合中间继电器
+#define Open_KK			GPIO_PinWrite(KK_PORT,KK_PIN1,0);GPIO_PinWrite(KK_PORT,KK_PIN2,0);//断开中间继电器
 
 #define DI_Filter_Size 3
 //DI信号滤波缓存

@@ -129,8 +129,8 @@ void System_Task(void const *argument)
 					Type_VolCur.Cur =	4000-Data_4608.OutputCurr;
 				}else 
 				{
-					if(BMS_STA==SEND_2560)	MeterData.kwh_start = MeterData.kwh_realtime;//准备充电时记录电表电量数据
-					Type_VolCur.KWh = MeterData.kwh_realtime-MeterData.kwh_start;//连上电表使用电表数据
+					if((BMS_STA>=SEND_9728)||(BMS_STA<SEND_2560))MeterData.kwh_start = MeterData.kwh_realtime;//准备充电时记录电表电量数据
+					Type_VolCur.KWh = MeterData.kwh_realtime - MeterData.kwh_start;//连上电表使用电表数据
 					Type_VolCur.Vol = MeterData.vol;
 					Type_VolCur.Cur =	MeterData.cur;
 				}
@@ -157,27 +157,32 @@ void System_Task(void const *argument)
 }
 
 
-unsigned char count;
 static void ABC_Data_Deal(unsigned short Task_Time)
 {
+	static unsigned char count,count1;
 	if(RX_Flag.ABC_Data_Rx_Flag)
 	{
 		RX_Flag.ABC_Data_Rx_Flag = false;
 		if(ABC_DATA_RX.ExtId==0x0ABC00C0)//充电启停/暂停，模块分配
 		{
-			Board_C_Sta = 0x01;//与C板通讯正常
-			Type_DM.DErr &= ~Disconnect_C;//故障恢复
-			GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,1);//收到数据灯5亮
-			Type_Control_Cmd.Module_Assign = ABC_DATA_RX.Data[4];
-			if(Board_Type == 0x0A)	{Type_Control_Cmd.Start_Stop = ABC_DATA_RX.Data[0];Type_Control_Cmd.Type = ABC_DATA_RX.Data[1];}
-			else if(Board_Type == 0x0B){Type_Control_Cmd.Start_Stop = ABC_DATA_RX.Data[2];Type_Control_Cmd.Type = ABC_DATA_RX.Data[3];}
+			if(++count1 > 5)	
+			{
+				Board_C_Sta = 0x01;//与C板通讯正常
+				Type_DM.DErr &= ~Disconnect_C;//故障恢复
+				GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,1);//收到数据灯5亮
+			}
+			Type_Control_Cmd.KK_Sta = ABC_DATA_RX.Data[3];
+			Type_Control_Cmd.Module_Assign = ABC_DATA_RX.Data[2];
+			if(Board_Type == 0x0A)	memcpy(&Type_Control_Cmd.CMD,&ABC_DATA_RX.Data[0],1);
+			else if(Board_Type == 0x0B)	memcpy(&Type_Control_Cmd.CMD,&ABC_DATA_RX.Data[1],1);
 		}
 		else if(ABC_DATA_RX.ExtId==0x0ABC00C1);//TODO:参数设置
 		count = 0;
-	}else count++;
+	}else {count++;count1 = 0;}
 	if((count > (5000/Task_Time))&&(Board_C_Sta==1))	
 	{
 		Board_C_Sta = 0xFF;//通讯故障（5s内未收到C板数据）
+		Type_Control_Cmd.CMD.Start_Stop = false;//关闭充电
 		Type_DM.DErr |= Disconnect_C;//只有连接上过C板再断开才会置故障位！
 		GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,0);//失联灯5熄灭
 	}

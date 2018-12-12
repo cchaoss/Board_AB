@@ -209,7 +209,7 @@ void LcdShow(void)
 						else if((Type_DM.MErr1&0xbe)!=0)	{Show_hanzi("Ä£¿é¸æ¾¯Sta1:",13,182,49);	show_number(Type_DM.MErr1,169,182,3,0);}
 							else if((Type_DM.MErr0&0x11)!=0)	{Show_hanzi("Ä£¿é¸æ¾¯Sta0:",13,182,49);	show_number(Type_DM.MErr0,169,182,3,0);}				
 					break;
-				case STOP
+				case STOP:
 					GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,0);//³äµçµÆÏ¨Ãð
 					switch_page(2);
 					switch(Type_BMS.Stop_Reason)

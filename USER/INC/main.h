@@ -80,7 +80,7 @@ typedef struct
 	uint8_t MErr2;	//模块故障原因sta2
 	uint8_t MErr1;	//模块故障原因sta1
 	uint8_t MErr0;	//模块故障原因sta0
-	
+	uint8_t M_Suspend_ACK;//模块暂停结果应答
 }Device_Module_Type;
 typedef struct
 {
@@ -100,13 +100,21 @@ typedef struct
 	uint8_t  Soc;	//88%
 	uint8_t   CC;	//CC电压
 }VolCur_Type;
+/**C->AB数据内容**/
 typedef struct
 {
-	uint8_t Start_Stop;		//0X00关闭A枪，0X01暂停，0X02开启
-	uint8_t Type;					//0x01 APP启停 0x02 刷卡启停
+	char	Start_Stop:1;//0X00关闭A枪，0X01开启
+	char  Suspend:1;	 //0X01暂停使能
+	char	Type:1;			 //0x00 APP启停 0x01 刷卡启停
+	char 	reserved:5;
+}Start_Stop_Cmd;
+typedef struct
+{
+	Start_Stop_Cmd CMD;
 	uint8_t Module_Assign;//0XAB各自用本组模块，0XAA全部模块给A枪用，0XBB全部模块给B枪用
+	uint8_t KK_Sta;//中间继电器控制状态 0断开 1闭合
 }Control_Type;
-/************************/
+/******************/
 typedef struct
 {
 	char Bits_1:1;
