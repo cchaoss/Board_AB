@@ -3,6 +3,7 @@
 #include "bms.h"
 #include "lcd.h"
 #include "adc.h"
+#include "acdc_module.h"
 #include "electric_meter.h"
 
 osThreadId MAIN_ID;//任务ID
@@ -43,18 +44,16 @@ static void Timer1_Callback(void const *arg)
 	kkk = (kkk+1)%(500/TIMER1_Delay);
 	if(kkk == 1)
 	{
-		if(Board_Type == 0X0A)	GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!((LED_BOARD_PORT->IDR >> LED_RUN_PIN) & 1));
-			else GPIO_PinWrite(LED_BOARD_PORT,LED3_PIN,!((LED_BOARD_PORT->IDR >> LED3_PIN) & 1));
+		if(Board_Type == 0X0A)	GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!((LED_BOARD_PORT->IDR>>LED_RUN_PIN)&1));
+			else GPIO_PinWrite(LED_BOARD_PORT,LED3_PIN,!((LED_BOARD_PORT->IDR>>LED3_PIN)&1));
 		IWDG_ReloadCounter();//内部看门狗喂狗	RUN_LED 500ms反转一次
 	}
-	
-	DI_Ack.JT 	 = DI_Status_Check(&DI_Filter.JT,		((JT_PORT->IDR >> JT_PIN) & 1));//读取所有IO输入信号并滤波
-	DI_Ack.START = DI_Status_Check(&DI_Filter.START,((START_PORT->IDR >> START_PIN) & 1));
-	DI_Ack.GUN   = DI_Status_Check(&DI_Filter.GUN,	((K_GUN_ACK_PORT->IDR >> K_GUN_ACK_PIN) & 1));
-	DI_Ack.LOCK  = DI_Status_Check(&DI_Filter.LOCK,	((LOCK_ACK_PORT->IDR >> LOCK_ACK_PIN) & 1));
-	DI_Ack.KK_H  = DI_Status_Check(&DI_Filter.KK_H,	((KK_ACK_PORT->IDR >> KK_ACK_PIN1) & 1));
-	DI_Ack.KK_L  = DI_Status_Check(&DI_Filter.KK_L,	((KK_ACK_PORT->IDR >> KK_ACK_PIN2) & 1));
-
+	DI_Ack.JT 	 = DI_Status_Check(&DI_Filter.JT,		((JT_PORT->IDR>>JT_PIN)&1));//读取所有IO输入信号并滤波
+	DI_Ack.START = DI_Status_Check(&DI_Filter.START,((START_PORT->IDR>>START_PIN)&1));
+	DI_Ack.GUN   = DI_Status_Check(&DI_Filter.GUN,	((K_GUN_ACK_PORT->IDR>>K_GUN_ACK_PIN)&1));
+	DI_Ack.LOCK  = DI_Status_Check(&DI_Filter.LOCK,	((LOCK_ACK_PORT->IDR>>LOCK_ACK_PIN)&1));
+	DI_Ack.KK_H  = DI_Status_Check(&DI_Filter.KK_H,	((KK_ACK_PORT->IDR>>KK_ACK_PIN1)&1));
+	DI_Ack.KK_L  = DI_Status_Check(&DI_Filter.KK_L,	((KK_ACK_PORT->IDR>>KK_ACK_PIN2)&1));
 	Get_Adc_Status();//计算AD采样值
 }	
 
@@ -68,15 +67,15 @@ unsigned char Board_C_Sta = 0;//0:C板不存在 1:C板通讯正常 0xFF:C板通讯超时
 //处理AB板数据上报到C板
 void System_Task(void const *argument)
 {
-	const unsigned short System_Task_Time = 100U;
+	const unsigned short System_Task_Time = 125U;
 	static unsigned char STEP,t;
-	
-//	if(Check_PE())		Type_DM.DErr |= Geodesic;//接地故障
-	DIPSwitch.Bits_1 = GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1);//拨码开关默认是高电平！
-	DIPSwitch.Bits_2 = GPIO_PinRead(DIP_SWITCH_PORT2,DIP_SWITCH_PIN2);
-	DIPSwitch.Bits_3 = GPIO_PinRead(DIP_SWITCH_PORT3,DIP_SWITCH_PIN3);
-	DIPSwitch.Bits_4 = GPIO_PinRead(DIP_SWITCH_PORT4,DIP_SWITCH_PIN4);
-	if(DIPSwitch.Bits_1 == 0)	{Board_Type = 0X0B; TxMsg_ABC.ExtId=0x0ABC00B0; Type_DM.DErr &= ~Geodesic;}//读取拨码开关地址:默认A	接地检查由A板检查
+	/*-拨码开关默认是高电平！*/
+	DIPSwitch.Bits_1 = GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1);//区分AB板
+	DIPSwitch.Bits_2 = GPIO_PinRead(DIP_SWITCH_PORT2,DIP_SWITCH_PIN2);//1开启0关闭接地检查
+	DIPSwitch.Bits_3 = GPIO_PinRead(DIP_SWITCH_PORT3,DIP_SWITCH_PIN3);//1开启0关闭绝缘检查	
+	DIPSwitch.Bits_4 = GPIO_PinRead(DIP_SWITCH_PORT4,DIP_SWITCH_PIN4);//1开启上锁0关闭上锁
+	if(DIPSwitch.Bits_2 == 1)	{if(Check_PE())		Type_DM.DErr |= Geodesic;}//接地故障//第2位拨码开关开启接地检查
+	if(DIPSwitch.Bits_1 != 1)	{Board_Type = 0X0B; TxMsg_ABC.ExtId=0x0ABC00B0; Type_DM.DErr &= ~Geodesic;}//读取拨码开关地址:默认A	接地检查由A板检查
 	
 	while(1)
 	{
@@ -125,12 +124,11 @@ void System_Task(void const *argument)
 				if(MeterSta == No_Link)
 				{
 					Type_VolCur.KWh =	dianliang;//无电表使用累加计算电量
-					Type_VolCur.Vol = Data_4608.OutputVolt;//无电表电压电流使用模块值
-					Type_VolCur.Cur =	4000-Data_4608.OutputCurr;
+					Type_VolCur.Vol = Module_Status.Output_Vol;//无电表电压电流使用模块值
+					Type_VolCur.Cur =	Module_Status.Output_Cur;
 				}else 
 				{
-					if((BMS_STA>=SEND_9728)||(BMS_STA<SEND_2560))MeterData.kwh_start = MeterData.kwh_realtime;//准备充电时记录电表电量数据
-					Type_VolCur.KWh = MeterData.kwh_realtime - MeterData.kwh_start;//连上电表使用电表数据
+					Type_VolCur.KWh = MeterData.kwh_realtime-MeterData.kwh_start;//连上电表使用电表数据
 					Type_VolCur.Vol = MeterData.vol;
 					Type_VolCur.Cur =	MeterData.cur;
 				}
@@ -149,8 +147,8 @@ void System_Task(void const *argument)
 		t = (t+1)%(1000/System_Task_Time);
 		if(t == 1)	
 		{
-			Read_ElectricMeter_Data();//读电表数据
 			LcdShow();//显示任务1s刷新一次
+			Read_ElectricMeter_Data();//读电表数据
 		}
 		osDelay(System_Task_Time);
 	}
@@ -185,5 +183,11 @@ static void ABC_Data_Deal(unsigned short Task_Time)
 		Type_Control_Cmd.CMD.Start_Stop = false;//关闭充电
 		Type_DM.DErr |= Disconnect_C;//只有连接上过C板再断开才会置故障位！
 		GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,0);//失联灯5熄灭
+	}
+	
+	if(Board_C_Sta == 0)	
+	{
+		Type_Control_Cmd.Module_Assign = 0XAA;/*没有连接C板时 A板可以控制所有模块*/
+		Type_Control_Cmd.CMD.Account = true;	/*没有连接C板时 置位结算完成*/
 	}
 }

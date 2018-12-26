@@ -60,6 +60,10 @@
 #define Open_K1K2		GPIO_PinWrite(K_GUN_PORT,K_GUN_PIN,0);//断开枪上主继电器K1K2
 #define Close_KK		GPIO_PinWrite(KK_PORT,KK_PIN1,1);GPIO_PinWrite(KK_PORT,KK_PIN2,1);//闭合中间继电器
 #define Open_KK			GPIO_PinWrite(KK_PORT,KK_PIN1,0);GPIO_PinWrite(KK_PORT,KK_PIN2,0);//断开中间继电器
+#define LED_ERR_ON	GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,1);//故障灯亮起
+#define LED_ERR_OFF	GPIO_PinWrite(LED_GUZHANG_PORT,LED_GUZHANG_PIN,0);//故障灯熄灭
+#define LED_CHARGE_ON		GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,1);//充电灯亮起
+#define LED_CHARGE_OFF	GPIO_PinWrite(LED_CHARGE_PORT,LED_CHARGE_PIN,0);//充电灯熄灭
 
 #define DI_Filter_Size 3
 //DI信号滤波缓存
@@ -93,10 +97,10 @@ extern DI_Ack_Flags DI_Ack;
 extern unsigned short ChargTime;//每30S加1
 extern float dianliang;
 
+void Bsp_init(void);//板级硬件初始化
 void Tim2_Init(unsigned short Psc,unsigned short Arr);
 void delay_us(u32 nTimer);
 unsigned char Check_PE(void);
 unsigned char DI_Status_Check(_Filter_TYPE*	Filter, unsigned char GPIOX_Status);
-void Bsp_init(void);//板级硬件初始化
 
 #endif

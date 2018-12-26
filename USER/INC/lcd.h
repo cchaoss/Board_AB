@@ -21,6 +21,8 @@ typedef struct
 	uint16_t P1_KW[2];
 	uint16_t P1_Time[2];
 	uint16_t P2_Exp[2];
+	uint16_t A_M[3];
+	uint16_t Sta[3];
 }Display_Position;
 
 

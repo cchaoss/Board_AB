@@ -423,9 +423,9 @@
               <FilePath>.\USER\SRC\main.c</FilePath>
             </File>
             <File>
-              <FileName>can.c</FileName>
+              <FileName>bms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\USER\SRC\can.c</FilePath>
+              <FilePath>.\USER\SRC\bms.c</FilePath>
             </File>
             <File>
               <FileName>acdc_module.c</FileName>
@@ -433,14 +433,9 @@
               <FilePath>.\USER\SRC\acdc_module.c</FilePath>
             </File>
             <File>
-              <FileName>bms.c</FileName>
+              <FileName>electric_meter.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\USER\SRC\bms.c</FilePath>
-            </File>
-            <File>
-              <FileName>bsp.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\USER\SRC\bsp.c</FilePath>
+              <FilePath>.\USER\SRC\electric_meter.c</FilePath>
             </File>
             <File>
               <FileName>lcd.c</FileName>
@@ -448,9 +443,14 @@
               <FilePath>.\USER\SRC\lcd.c</FilePath>
             </File>
             <File>
-              <FileName>electric_meter.c</FileName>
+              <FileName>bsp.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\USER\SRC\electric_meter.c</FilePath>
+              <FilePath>.\USER\SRC\bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\SRC\can.c</FilePath>
             </File>
             <File>
               <FileName>adc.c</FileName>

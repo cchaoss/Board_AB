@@ -44,6 +44,7 @@ typedef struct
 	uint8_t sta0;
 }sta_ack_type;
 
+//#define MAX_GROUP_NUM 8//一组模块最多8个2*8=16个
 #define Total_Number_Read		0x02823FF0U//读取所有模块总数量
 #define Total_Number_Ack		0x0282F03FU
 #define GroupA_Number_Read	0x02C200F0U//读组0模块总数量
@@ -66,8 +67,6 @@ typedef struct
 #define GroupA_Module_ONOFF	0x02DA00F0U//设置组0所有模块开关机
 #define GroupB_Module_ONOFF	0x02DA01F0U//设置组1所有模块开关机
 #define Set_Single_Module_Group	0x029600F0U//设置模块0的组号		
-
-#define MAX_GROUP_NUM 8//一组模块最多8个2*8=16个
 
 extern uint8_t ACDC_VolCur_Buffer[8];
 extern ACDC_Status Module_Status;//电源模块的个数 温度 状态 电压电流	

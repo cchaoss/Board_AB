@@ -14,10 +14,10 @@
 
 enum _Device_err
 {
-	Geodesic = 1,			//接地故障（只需要检查A）*
-	Disconnect_C = 2,			//与C板通讯故障
-	No_Module = 4,				//无电源模块连接				 *
-	Dc_Table_Err = 8,			//本枪直流表无连接(联网版本)
+	Geodesic = 1<<0,			//接地故障（只需要检查A）*
+	Disconnect_C = 1<<1,	//与C板通讯故障
+	No_Module = 1<<2,		//无电源模块连接				 *
+	Dc_Table_Err = 1<<3,	//本枪直流表无连接(联网版本)
 };
 enum _manual_rea
 {
@@ -53,6 +53,7 @@ enum _guzhang
 //	Tap_Check_ERR=5,//泄放检查错误
 	Insulation_ERR= 6,//绝缘检测错误
 	Bat_Vol_ERR = 7,//电池电压与报文偏差过大
+	CC_ERR = 8,			//CC信号错误
 };
 enum _Err_Bms
 {
@@ -68,7 +69,6 @@ enum _Err_Bms
 	VolErr = 11,//电压异常
 	VolUnknown=12,//电压不可信
 };
-
 
 /*A/B<——>C数据交互帧内容*/
 typedef struct
@@ -106,7 +106,8 @@ typedef struct
 	char	Start_Stop:1;//0X00关闭A枪，0X01开启
 	char  Suspend:1;	 //0X01暂停使能
 	char	Type:1;			 //0x00 APP启停 0x01 刷卡启停
-	char 	reserved:5;
+	char	Account:1;	 //结算标记0未结算，1结算完成
+	char 	reserved:4;
 }Start_Stop_Cmd;
 typedef struct
 {
@@ -117,12 +118,12 @@ typedef struct
 /******************/
 typedef struct
 {
-	char Bits_1:1;
+	char Bits_1:1;//AB板地址
 	char Bits_2:1;
 	char Bits_3:1;
 	char Bits_4:1;
 	char reserved:4;
-}DIPSwitchBits;
+}DIPSwitchBits;//拨码开关
 extern DIPSwitchBits DIPSwitch;
 extern Bms_Type	Type_BMS;
 extern VolCur_Type	Type_VolCur;
@@ -133,6 +134,7 @@ extern unsigned char Board_Type;//A B板定义0X0A 0X0B
 extern unsigned char Board_C_Sta;//AB板与C板连接状态：0无连接 1 连接正常 FF通讯超时重连
 static void ABC_Data_Deal(unsigned short Task_Time);
 static void Timer1_Callback(void const *arg);
+
 void System_Task(void const *argument);
 void BMS_Task(void const *argument);                
 void ACDC_Module_Task(void const *argument); 

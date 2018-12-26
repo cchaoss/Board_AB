@@ -71,7 +71,7 @@ void Get_Adc_Status(void)
 	unsigned short gg = 0;
 	float VT = 0;
 	if(count == 6)
-	{
+	{	/****************/
 		if(once){once = false;VTCalibrate[0] = temp[0]/6;VTCalibrate[1] = temp[1]/6;}//保存绝缘检查的校准值
 		if(insulation_flag)
 		{

@@ -3,12 +3,13 @@
 #include "can.h"
 #include "adc.h"
 #include "acdc_module.h"
+#include "electric_meter.h"
 
 #pragma pack(1)//强制1字节对齐
 stuPGN9728Type Data_9728 = {0x01,0x01,0x00};
-stuPGN256Type	 Data_256  = {0x00,0,};
+stuPGN256Type	 Data_256;
 stuPGN1792Type Data_1792;
-stuPGN2048Type Data_2048 = {ACDC_MAX_VOL,ACDC_MIN_VOL,ACDC_MAX_CUR};//充电机输出电压：200-750V 输出电流：0-200A
+stuPGN2048Type Data_2048 = {ACDC_MAX_VOL,ACDC_MIN_VOL,ACDC_MAX_CUR,ACDC_MIN_CUR};//充电机输出电压：200-750V 输出电流：0-200A
 stuPGN2560Type Data_2560;
 stuPGN4608Type Data_4608 = {0,0,0,0x01};//默认允许充电2015GB
 stuPGN6656Type Data_6656;
@@ -47,159 +48,179 @@ TX_BMS CSD_7424 = {(7424>>8),		6,		 0xf4,		 0x56,		 8,					250,			&Data_7424};//
 TX_BMS CEM_7936 = {(7936>>8),		2,		 0xf4,		 0x56,		 4,					250,			&Data_7936};//充电机错误报文
 unsigned char OUT,guzhang;
 enum _BMS_STA BMS_STA = BEGIN;
-bool once_run = true;
 
 void BMS_Task(void const *argument)
 {
 	const unsigned char BMS_Task_Time = 25U;//10ms循环
 	static unsigned short t,t1,timeout,timeout1;
-	static unsigned char fuck,Last_KK_Sta;
+	static bool once_run = true,once_run_lock = true;
+	static unsigned short fuck1,fuck2,count;
 	while(1)
 	{	
-		Single_Package_Deal();//负责接送处理单包数据
-		/*单独控制中间继电器状态*/
-		if((Type_Control_Cmd.KK_Sta == 1)&&(Last_KK_Sta==0))	{Close_KK;	fuck = 0;}
-			else if((Type_Control_Cmd.KK_Sta == 0)&&(Last_KK_Sta==1))	{Open_KK;  fuck = 0;}
-		Last_KK_Sta = Type_Control_Cmd.KK_Sta;//保存上一次状态
-		fuck = (fuck+1)%(5000/BMS_Task_Time);//5s检查一次中间继电器状态
-		if(fuck == (5000/BMS_Task_Time)-1)	
+		if((Board_Type == 0X0A)&&(Board_C_Sta!=0))//中间继电器由A板负责控制检测
 		{
-			if((DI_Ack.KK_H!=0xFF)&&(DI_Ack.KK_H!=((KK_PORT->IDR>>KK_PIN1)&1)))			guzhang = KK_Relay_Err;
-			if((DI_Ack.KK_L!=0xFF)&&(DI_Ack.KK_L!=((KK_PORT->IDR>>KK_PIN2)&1)))			guzhang = KK_Relay_Err;//中间继电器错误（这个继电器有点鸡贼）
-		}/*专门为了检查中间继电器*/
+			if(Type_Control_Cmd.KK_Sta == 1)/*单独控制中间继电器状态*/
+			{
+				fuck1=0;fuck2++;
+				if(++count==(5000/BMS_Task_Time))	{Close_KK;	count = 0;}//5s后再闭合中间继电器
+			}
+			else if(Type_Control_Cmd.KK_Sta == 0)	{Open_KK;	count = 0;	fuck1++;fuck2=0;}
+			if((fuck1 == (5000/BMS_Task_Time))||(fuck2 == (10000/BMS_Task_Time)))/*专门为了检查中间继电器*/	
+			{
+				fuck1 = fuck2 = 0;
+				if((DI_Ack.KK_H!=0xFF)&&(DI_Ack.KK_H!=((KK_PORT->IDR>>KK_PIN1)&1)))	guzhang = KK_Relay_Err;
+				if((DI_Ack.KK_L!=0xFF)&&(DI_Ack.KK_L!=((KK_PORT->IDR>>KK_PIN2)&1)))	guzhang = KK_Relay_Err;//中间继电器错误（这个继电器有点鸡贼）
+			}
+		}
 		
+		if((BMS_STA>=SEND_9728)&&(BMS_STA<=SEND_4608))
+		{
+			if(Type_DM.JiTing==1)//人工停止-急停按下
+			{
+				Data_6656.ChargStopChargingReason = Mannul_Stop;
+				Type_BMS.Manual = JT_Stop;	
+				t = timeout = 0;	
+				BMS_STA = SEND_6656;
+			}
+			if((AD_DATA.CC<2.8)||(AD_DATA.CC>5.2))//充电过程中CC电压异常
+			{
+				Data_6656.ChargStopChargingReason = Err_Stop;
+				guzhang = CC_ERR;//CC信号错误		
+				t = timeout = 0;	
+				BMS_STA = SEND_6656;
+			}
+		}
+		
+		Single_Package_Deal();//负责接送处理单包数据
 		switch(BMS_STA)//BMS发送处理
 		{
-			case BEGIN://插抢准备
-			{			
-				if((Type_DM.JiTing==0)&&((AD_DATA.CC>3)&&(AD_DATA.CC<5))&&(Type_DM.DErr==0))//急停未按下	CC插抢	桩无故障
-				{	//未连接C板通过启停开关开启充电->单枪版本！			//连接C板通过C板下发的开启充电指令->双枪联网版本！
-					if(((Board_C_Sta == 0)&&(DI_Ack.START == 1))||((Board_C_Sta == 0x01)&&Type_Control_Cmd.CMD.Start_Stop))
-					{
-						if(DI_Ack.LOCK == 1)//上锁就绪
-						{	
-							BMS_Data_Init();
-							Close_K3K4;//闭合辅助电源继电器K3K4
-							OUT = t = timeout = timeout1 = 0;
-							BMS_STA = SEND_9728;
-						}
-						else//锁状态-未上锁-锁枪
-						{
-							t = (t+1)%(2500/BMS_Task_Time);
-							if(t == 1)	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,1);
-							if(t == (100/BMS_Task_Time))	{timeout++;GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,0);}
-							if(timeout==2)//超时5s锁未锁好->结束充电需要再次拔枪
-							{	
-								Data_6656.ChargStopChargingReason = Err_Stop;	
-								Data_6656.ChargFaultReason |=0x0400;//其他故障
-								guzhang = Lock_ERR;	
-								t=timeout=0;	BMS_STA = SEND_6656;
-							}
-						}
+			case BEGIN://插抢准备		
+				if((Type_DM.DErr==0)&&(Type_DM.JiTing==0)&&((AD_DATA.CC>2.8)&&(AD_DATA.CC<5.2)))//桩无故障 急停未按下	CC插抢	
+				{	//未连接C板通过启停开关开启充电->单枪版本！	//连接C板通过C板下发的开启充电指令->双枪联网版本！
+					if(((Board_C_Sta==0)&&(DI_Ack.START==1))||((Board_C_Sta==0x01)&&Type_Control_Cmd.CMD.Start_Stop))
+						BMS_STA = LOCKED;
+				}
+			break;
+				
+			case LOCKED:
+				if((DI_Ack.LOCK == 1)||(DIPSwitch.Bits_4 == 0))//上锁就绪||关闭上锁控制
+				{	
+					Close_K3K4;//闭合辅助电源继电器K3K4
+					Tim2_Init(60000,36000);//开始累计充电时间
+					MeterData.kwh_start = MeterData.kwh_realtime;//记录本次开始充电是的电表初始值
+					t = timeout = 0;
+					BMS_STA = SEND_9728;
+				}
+				else//锁状态-未上锁-锁枪
+				{
+					t = (t+1)%(2500/BMS_Task_Time);
+					if(t == 1)	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,1);
+					if(t == (100/BMS_Task_Time))	{GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN1,0);	timeout++;}
+					if(timeout == 2)//超时5s锁未锁好->结束充电需要再次拔枪
+					{	
+						Data_6656.ChargStopChargingReason = Err_Stop;	
+						Data_6656.ChargFaultReason |=0x0400;//其他故障	
+						guzhang = Lock_ERR;//无法上锁
+						t = timeout = 0;	
+						BMS_STA = SEND_6656;
 					}
 				}
-			}break;	
+			break;
 			
 			case SEND_9728://充电握手
-			{
 				t = (t+1)%(CHM_9728.Period/BMS_Task_Time);
 				if(t == 1)	BMS_Send(CHM_9728);
-				//if((RX_BMS_TAB[WAIT_9984_BHM].Rx_status == 1)||(timeout > 20))//收到9984||超时5s->GB2015
+				
 				if(((Board_Type==0x0A)&&((Type_Control_Cmd.Module_Assign == 0xAA)||(Type_Control_Cmd.Module_Assign == 0xAB))) \
 					||((Board_Type==0x0B)&&((Type_Control_Cmd.Module_Assign == 0xBB)||(Type_Control_Cmd.Module_Assign == 0xAB))))//无暂停使能+已分配模块可用
 				{
-					timeout++;
-//				if(timeout == 1)	{ACDC_Set_Vol_Cur(5000,0);Close_K1K2;}//电压模块输出电压 闭合枪上继电器K1K2
-//				if(timeout == 17)	Start_Insulation_Check();开启绝缘检查(电压达到500v后再开启检查)5s后
-//				if(timeout == 20)//750ms后取绝缘检查结果
-//				{
-//					ACDC_Set_Vol_Cur(0,0);//关闭电源
-//					if(AD_DATA.VT_Return == 1)
-//					{
-//	 					t = timeout = 0;
-//						Data_6656.ChargStopChargingReason = Err_Stop;
-//						Data_6656.ChargFaultReason |=0x0400;//其他故障
-//						guzhang = Insulation_ERR;//绝缘检查错误
-//						BMS_STA = SEND_6656;
-//					}
-//				}			
-					/*if(k1k2接触器电压<10V)//guzhang = Gun_Vol_ERR;//接触器外侧电压>10V//需要重新拔枪
-					if(泄放电路检查ok？)//guzhang = Tap_Check_ERR;//泄放检查错误//停用本桩*/					
-					if(timeout == 25)	{Open_K1K2;	t=timeout=0;	BMS_STA = SEND_256;}//1s后断开枪上继电器K1K2
+					timeout = (timeout+1)%(7000/BMS_Task_Time);
+					if(DIPSwitch.Bits_3 == 1)//第3位拨码开关开启绝缘检查
+					{
+						if(timeout == (200/BMS_Task_Time))	{ACDC_Set_Vol_Cur(5000,0);	Close_K1K2;}//电压模块输出电压 闭合枪上继电器K1K2
+						if(timeout == (5000/BMS_Task_Time))	Start_Insulation_Check();//开启绝缘检查(电压达到500v后再开启检查)5s后
+						if(timeout == (5800/BMS_Task_Time))//800ms后取绝缘检查结果
+						{
+							ACDC_Set_Vol_Cur(0,0);//关闭电源
+							if(AD_DATA.VT_Return == 1)
+							{	
+								Data_6656.ChargStopChargingReason = Err_Stop;
+								Data_6656.ChargFaultReason |=0x0400;//其他故障	
+								guzhang = Insulation_ERR;//绝缘检查错误						
+								t = timeout = 0;	
+								BMS_STA = SEND_6656;
+							}
+						}
+					}
+					if(timeout == (6000/BMS_Task_Time))	
+					{
+						Open_K1K2;//200ms后断开枪上继电器K1K2
+						t = timeout = 0;
+						BMS_STA = SEND_256;
+					}
 				}
-			}break;	
+				//if((RX_BMS_TAB[WAIT_9984_BHM].Rx_status == 1)||(timeout > 20))//收到9984||超时5s->GB2015
+				//if(k1k2接触器电压<10V)//guzhang = Gun_Vol_ERR;//接触器外侧电压>10V//需要重新拔枪
+				//if(泄放电路检查ok？)//guzhang = Tap_Check_ERR;//泄放检查错误//停用本桩	
+			break;	
 			
 			case SEND_256://充电辨识
-			{
 				t = (t+1)%(CRM_256.Period/BMS_Task_Time);
 				if(t == 1)	{timeout++;	BMS_Send(CRM_256);}
 				
-				if(RX_BMS_TAB[WAIT_512_BRM].Rx_status == 1)	{timeout = 0;	Data_256.IdentifyResult = 0xAA;}//辨识成功	
+				if(RX_BMS_TAB[WAIT_512_BRM].Rx_status == 1)	{timeout = 0;	Data_256.IdentifyResult = 0xAA;}//辨识成功	清空超时时间
 					else if(timeout > 20)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.IdentifyTimeOut |= 0x01;}//接收车辆辨识报文BRM超时5s
 				
 				if(RX_BMS_TAB[WAIT_1536_BCP].Rx_status == 1)	{t = timeout = 0;	BMS_STA = SEND_2048;}
 					else if(timeout > 30)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x01;}//接受1536电池充电参数超时7s(default 5s)
-			}break;
+			break;
 			
 			case SEND_2048://充电机最大输出能力/时间同步
-			{
 				t = (t+1)%(CML_2048.Period/BMS_Task_Time);
-				if(t == 1)	{timeout++;	BMS_Send(CTS_1792);	BMS_Send(CML_2048);}
-				
+				if(t == 1)	{timeout++;	BMS_Send(CTS_1792);}
+				if(t == 2)	BMS_Send(CML_2048);
 				if(RX_BMS_TAB[WAIT_2304_BRO].Rx_status == 1)
 				{
-					if(Data_2304.BMSSta==0xAA)	{t = timeout = 0;	BMS_STA = SEND_2560;}
+					if(Data_2304.BMSSta==0xAA)	{t=timeout=timeout1=0;	BMS_STA = SEND_2560;}
 						else if(timeout>240)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x04;}//BRO在60s内未准备好
-				}else if(timeout>20)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x04;}//接受BROBMS准备充电就绪超时5s	
-			}break;
+				}else if(timeout > 20)	{t=timeout=0;	BMS_STA = TIME_OUT;	Data_7936.ChargingParamTimeOut|=0x04;}//接受BROBMS准备充电就绪超时5s
+			break;
 			
 			case SEND_2560://充电机输出准备就绪
-			{
 				t = (t+1)%(CRO_2560.Period/BMS_Task_Time);
 				if(t == 1)	
 				{
-					timeout1++;	BMS_Send(CRO_2560);
+					BMS_Send(CRO_2560);
+					LED_CHARGE_ON;//充电灯亮起
+					ACDC_Set_Vol_Cur(Data_1536.BatPreVolt+55,0);//预充
 					if(Data_2560.PrepareOK == 0xAA) timeout++;//充电机准备就绪后才计算超时
+					timeout1++;
 				}
-//				if(Data_1536.BatPreVolt)//判断枪电压与报文电池电压相差5%以内，在充电机最大最小电压之间(可适当放宽到10%)
-//				{
-//					t = timeou = 0;	
-//					Data_6656.ChargStopChargingReason = Err_Stop;	
-//					Data_6656.ChargFaultReason |=0x0400;//其他故障
-//					guzhang = Bat_Vol_ERR;//需要再次拔枪
-//					BMS_STA = SEND_6656;
-//				}
-				if(timeout1 == 1)	ACDC_Set_Vol_Cur(Data_1536.BatPreVolt+55,0);
-//				if(Module_Status.Output_Vol*10 > Data_1536.BatPreVolt+10)//调整电源模块输出电压高于电池电压1-10v
-				{
-					Close_K1K2;//闭合枪上主继电器K1K2
-					Data_2560.PrepareOK = 0xAA;//充电机准备就绪
-				}			
+				if((Module_Status.Output_Vol*10>Data_1536.BatPreVolt)||(timeout1 > 20))	Data_2560.PrepareOK = 0xAA;//充电机准备就绪//调整电源模块输出电压高于电池电压1-10v				
+				
 				if((RX_BMS_TAB[WAIT_4352_BCS].Rx_status==1)&&(RX_BMS_TAB[WAIT_4096_BCL].Rx_status==1))	
 				{
-					Tim2_Init(60000,36000);//开始累计充电时间
-					t1=t=timeout=timeout1= 0;	BMS_STA = SEND_4608;
+					Close_K1K2;//闭合枪上主继电器K1K2
+					t=t1=timeout=timeout1=0;	
+					BMS_STA = SEND_4608;
 				}
-				else if(timeout>20)	{t1=t=timeout=timeout1= 0;	Data_7936.BMSChargingStaTimeOut|=0x05;	BMS_STA=TIME_OUT;}//4096电池充电需求超时5s 4352电池充电总状态报文超5s(共生共死)
-			}break;
+				else if(timeout>20)	{t=timeout=0;	Data_7936.BMSChargingStaTimeOut|=0x05;	BMS_STA=TIME_OUT;}//4096电池充电需求超时5s 4352电池充电总状态报文超5s(共生共死)
+			break;
 			
 			case SEND_4608:/*充电机充电状态(充电阶段)*/
-			{
 				OUT = 0;//通讯超时重连次数清零：到充电阶段说明所有报文都收到一遍
 				t = (t+1)%(CCS_4608.Period/BMS_Task_Time);
 				if(t == 1)	{timeout++;timeout1++;	BMS_Send(CCS_4608);}
 				
-				if((RX_BMS_TAB[WAIT_4096_BCL].Rx_status==0)&&(timeout>4))//接受4096电池充电需求超时1s
+				if((RX_BMS_TAB[WAIT_4096_BCL].Rx_status==0)&&(timeout>5))//接受4096电池充电需求超时1s
 				{
 					Data_7936.BMSChargingStaTimeOut|=0x04;
-					t = timeout = 0;	
-					BMS_STA=TIME_OUT;	
+					t = timeout = 0;	BMS_STA=TIME_OUT;	
 				}
 				if((RX_BMS_TAB[WAIT_4352_BCS].Rx_status==0)&&(timeout1>20))//4352电池充电总状态报文超5s
 				{
 					Data_7936.BMSChargingStaTimeOut|=0x01;
-					t = timeout = 0;	
-					BMS_STA=TIME_OUT;
+					t = timeout = 0;	BMS_STA=TIME_OUT;
 				}
 				if(RX_BMS_TAB[WAIT_4096_BCL].Rx_status==1)	{timeout = 0;	RX_BMS_TAB[WAIT_4096_BCL].Rx_status = 0;}//接受到报文清空标记
 				if(RX_BMS_TAB[WAIT_4352_BCS].Rx_status==1)	{timeout1= 0;	RX_BMS_TAB[WAIT_4352_BCS].Rx_status = 0;}
@@ -211,103 +232,123 @@ void BMS_Task(void const *argument)
 					{
 						if(Data_4864.BatConnetSta&0x10)	ACDC_Set_Vol_Cur(Data_4096.NeedVolt,4000-Data_4096.NeedCurr);//允许充电
 							else	ACDC_Set_Vol_Cur(0,0);//充电暂停	
-					}else	{t = timeout = 0;	BMS_STA = SEND_6656;}//电池异常停止充电
+					}else	{t=timeout=0;	BMS_STA = SEND_6656;}//电池异常停止充电
 				}
-				if(RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)//收到BMS中止充电
-				{
-					Data_6656.ChargStopChargingReason = BMS_Stop;//BMS停止
-					t = timeout = 0;	BMS_STA = STOP;
-				}
-				
-				t1 = (t1+1)%(300/BMS_Task_Time);
-				if(t1 == (300/BMS_Task_Time)-1)/*300ms周期更新电源模块输出、检测继电器状态是否正确*/
+
+				t1 = (t1+1)%(300/BMS_Task_Time);/*300ms周期更新电源模块输出、检测继电器状态是否正确*/
+				if(t1 == (300/BMS_Task_Time)-1)
 				{
 					Data_4608.OutputVolt = Module_Status.Output_Vol*10;
 					Data_4608.OutputCurr = 4000-Module_Status.Output_Cur*10;
 					Data_4608.ChargingTime = Bound(ChargTime>>1,600,0);
-					
 					if((DI_Ack.GUN!=0xFF)&&(DI_Ack.GUN!=((K_GUN_PORT->IDR>>K_GUN_PIN)&1)))	guzhang = GUN_Relay_Err;//枪上继电器错误
 					if((guzhang==GUN_Relay_Err)||(guzhang==KK_Relay_Err))
 					{	
 						Data_6656.ChargStopChargingReason = Err_Stop;	
 						Data_6656.ChargFaultReason |=0x04;//充电机连接器故障
-						t = timeout = 0;	BMS_STA = SEND_6656;
+						t = timeout = 0;	
+						BMS_STA = SEND_6656;
 					}
 				}
+				
+				/*如果采用不中断充电的切换方式，则这里不会进来，因为C板没有置位Suspend*/
 				if(Type_Control_Cmd.CMD.Suspend)//C板收到消息后将Type_Control_Cmd.CMD.Suspend置0
 				{
 					ACDC_Set_Vol_Cur(0,0);//充电暂停->分配电源模块！
 					if(Module_Status.Output_Vol < 10)//等待电流<10A 
-					{
-						Open_K1K2;//断开枪上继电器
-						Type_DM.M_Suspend_ACK = 1;//告知C板 本枪暂停ok了
-					}
+						{Open_K1K2;	Type_DM.M_Suspend_ACK = 1;}//断开枪上继电器//告知C板 本枪暂停ok了
 				}else if(Type_DM.M_Suspend_ACK == 1)	{Close_K1K2;	Type_DM.M_Suspend_ACK = 0;}//闭合枪上继电器 情况暂停应答标志 继续充电
+				/**********************************************************************/
 				
-				if(Type_DM.JiTing==1)	{Data_6656.ChargStopChargingReason=Mannul_Stop;Type_BMS.Manual = JT_Stop;	t=timeout=0;	BMS_STA = SEND_6656;}//人工停止-急停按下
-				if(Board_C_Sta == 0)//未连接C板通过启停开关开启充电->单枪版本！
+				if(RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)//收到BMS中止充电
 				{
-					if(DI_Ack.START==0)	{Data_6656.ChargStopChargingReason=Mannul_Stop;Type_BMS.Manual = Start_Stop;	t=timeout=0;	BMS_STA = SEND_6656;}//人工停止-启停开关
+					Data_6656.ChargStopChargingReason = BMS_Stop;//BMS停止
+					t = timeout = 0;	
+					BMS_STA = STOP;
 				}
-				else if(Type_Control_Cmd.CMD.Start_Stop==false)//人工停止-刷卡APP停止
+				
+				if((Board_C_Sta == 0)&&(DI_Ack.START==0))//未连接C板通过启停开关开启充电//人工停止-启停开关
+				{
+					Data_6656.ChargStopChargingReason = Mannul_Stop;
+					Type_BMS.Manual = Start_Stop;	
+					t = timeout = 0;	
+					BMS_STA = SEND_6656;
+				}
+				if((Board_C_Sta != 0)&&(Type_Control_Cmd.CMD.Start_Stop==false))//人工停止-刷卡/APP停止
 				{
 					Data_6656.ChargStopChargingReason=Mannul_Stop;	
-					if(Type_Control_Cmd.CMD.Type)	Type_BMS.Manual = Card_Stop;	else Type_BMS.Manual = App_Stop;
-					t=timeout=0;	BMS_STA = SEND_6656;
+					if(Type_Control_Cmd.CMD.Type)	Type_BMS.Manual = Card_Stop;	
+						else Type_BMS.Manual = App_Stop;
+					t = timeout = 0;	
+					BMS_STA = SEND_6656;
 				}
-			}break;
+			break;
 			
 			case SEND_6656://充电机中止充电
-			{
-				BMS_Send(CST_6656);//10ms周期发送
+				BMS_Send(CST_6656);
 				if(guzhang == 0)
 				{
 					timeout++;
-					if((RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)||(timeout > 5000/BMS_Task_Time))//收到BMS中止充电BST||发送CTS10*500=5s后
+					if((RX_BMS_TAB[WAIT_6400_BST].Rx_status == 1)||(timeout>(2000/BMS_Task_Time)))//收到BMS中止充电BST||发送CTS10*500=5s后
 					{
-						ACDC_Set_Vol_Cur(0,0);//电力输出停止操作
 						BMS_Send(CSD_7424);//充电机统计数据报文
-						t = timeout = 0;BMS_STA = STOP;
+						t = timeout = 0;
+						BMS_STA = STOP;
 					}
 				}
-				else{t = timeout = 0;	BMS_STA = STOP;}
-			}break;			
+				else
+				{
+					LED_ERR_ON;//故障灯亮起	
+					t = timeout = 0;	
+					BMS_STA = STOP;
+				}
+			break;			
 
-			case TIME_OUT://超时重连处理
-			{
+			case TIME_OUT://超时重连处理（7936发送3条后重新开始辨识）
 				if(OUT < 3)//3次以内超时则重连
 				{
-					t = (t+1)%(CEM_7936.Period/BMS_Task_Time);
-					if(t == 1)	
-					{
-						BMS_Send(CEM_7936);//发送充电机错误报文
-						ACDC_Set_Vol_Cur(0,0);//电力输出停止操作
-					}	
-					if((t == 200/BMS_Task_Time))//delay200ms(或者电流5A以下)-保护继电器寿命
+					t = (t+1)%(600/BMS_Task_Time);
+					if(t == 1)	{ACDC_Set_Vol_Cur(0,0);	BMS_Send(CEM_7936);}//电力输出停止操作//发送充电机错误报文
+					if(t == (250/BMS_Task_Time))	BMS_Send(CEM_7936);//发送充电机错误报文
+					if(t == (500/BMS_Task_Time))//delay200ms(或者电流5A以下)-保护继电器寿命
 					{	
+						BMS_Send(CEM_7936);//发送充电机错误报文
 						Open_K1K2;//断开枪上主继电器K1K2
 						OUT++;//重连次数+1
 						BMS_Data_Init();//报文接受标记
-						t = timeout = timeout1 = 0;	BMS_STA = SEND_256;//重新开始辨识
+						t=timeout=0;	
+						BMS_STA = SEND_256;//重新开始辨识
 					}					
 				}
-				else {t = timeout = 0;	BMS_STA = STOP;}//3次通讯超时重连后再超时则不再重连 直接结束充电					
-			}break;
+				else {t=timeout=0;	BMS_STA = STOP;}//3次通讯超时重连后再超时则不再重连 直接结束充电					
+			break;
 			
 			case STOP://结束充电操作后等待再次插抢->BEGIN
-			{
 				if(once_run)
 				{
-					t = (t+1)%(500/BMS_Task_Time);
+					LED_CHARGE_OFF;//充电灯熄灭
+					t = (t+1)%(600/BMS_Task_Time);
 					if(t == 1)	ACDC_Set_Vol_Cur(0,0);//电力输出停止操作
-					if(t == (200/BMS_Task_Time))	{Open_K3K4;	Open_K1K2;}//断开辅助电源K3K4//断开枪上主继电器K1K2//delay200ms(或者电流5A以下)-保护继电器寿命
+					if(t == (200/BMS_Task_Time))	{Open_K3K4;	Open_K1K2;	once_run = false;}//断开辅助电源K3K4//断开枪上主继电器K1K2//delay200ms(或者电流5A以下)-保护继电器寿命
+				}
+				else if(Type_Control_Cmd.CMD.Account&&once_run_lock)
+				{
 					if(t == (200/BMS_Task_Time))	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,1);//打开锁
 					if(t == (300/BMS_Task_Time))	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,0);
-					if(t == (350/BMS_Task_Time))	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,1);//打开锁
-					if(t == (450/BMS_Task_Time))	{GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,0);once_run = false;}
+					if(t == (450/BMS_Task_Time))	GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,1);//打开锁
+					if(t == (550/BMS_Task_Time))	{GPIO_PinWrite(LOCK_GUN_PORT,LOCK_GUN_PIN2,0);once_run_lock=false;}
+					t++;
 				}
-				if(AD_DATA.CC > 5.5f)	{t = timeout = 0;BMS_STA = BEGIN;}//必须重新拔枪插抢才可以下一次充电
-			}break;
+				if((once_run_lock==false)&&(AD_DATA.CC > 5.5f))//必须重新拔枪插抢才可以下一次充电
+				{
+					once_run=once_run_lock = true;	
+					t=t1=timeout=timeout1=0;
+					OUT = 0;//清空重连次数					
+					BMS_Data_Init();//清空本次充电的报文数据
+					LED_ERR_OFF;//故障灯熄灭
+					BMS_STA = BEGIN;
+				}
+			break;
 			default:break;
 		}	
 		osDelay(BMS_Task_Time);
@@ -327,7 +368,6 @@ static void BMS_Data_Init(void)
 	memset(&Data_7936,0,sizeof(Data_7936));//TX
 	memset(&Data_4864,0,sizeof(Data_4864));//RX电池状态标记清空
 	guzhang = 0;//故障位清零
-	once_run = true;
 }
 
 CanTxMsg TxMsg1 = {0, 0, CAN_Id_Extended, CAN_RTR_Data, 8, {0}};//扩展帧 数据帧
@@ -399,7 +439,7 @@ void Multi_Package_Deal(void)
 static void ACDC_Set_Vol_Cur(short vol,	short cur)
 {
 	int V = Bound(vol,ACDC_MAX_VOL,0)*100;//0-700V
-	int C = Bound(cur,4000-ACDC_MAX_CUR,0)*100;//0-300V
+	int C = Bound(cur,4000-ACDC_MAX_CUR,0)*100;//0-300A
 	ACDC_VolCur_Buffer[0] = V>>24;
 	ACDC_VolCur_Buffer[1] = V>>16;
 	ACDC_VolCur_Buffer[2] = V>>8;
