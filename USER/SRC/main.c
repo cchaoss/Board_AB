@@ -13,7 +13,7 @@ osThreadId	ACDC_Module_Task_ID;
 
 //线程定义结构体:任务名、优先级、缺省、任务栈空间（byte）
 osThreadDef(System_Task, 	osPriorityHigh, 1, 300);
-osThreadDef(BMS_Task, 		osPriorityHigh, 1, 600); 
+osThreadDef(BMS_Task, 		osPriorityHigh, 1, 500); 
 osThreadDef(ACDC_Module_Task, osPriorityNormal, 1, 200);
 
 #define TIMER1_Delay	50U//ms
@@ -44,9 +44,8 @@ static void Timer1_Callback(void const *arg)
 	kkk = (kkk+1)%(500/TIMER1_Delay);
 	if(kkk == 1)
 	{
-		if(Board_Type == 0X0A)	GPIO_PinWrite(LED_BOARD_PORT,LED_RUN_PIN,!((LED_BOARD_PORT->IDR>>LED_RUN_PIN)&1));
-			else GPIO_PinWrite(LED_BOARD_PORT,LED3_PIN,!((LED_BOARD_PORT->IDR>>LED3_PIN)&1));
-		IWDG_ReloadCounter();//内部看门狗喂狗	RUN_LED 500ms反转一次
+		LED_RUN_TOGGLE;//RUN_LED 500ms反转一次
+		IWDG_ReloadCounter();//内部看门狗喂狗	
 	}
 	DI_Ack.JT 	 = DI_Status_Check(&DI_Filter.JT,		((JT_PORT->IDR>>JT_PIN)&1));//读取所有IO输入信号并滤波
 	DI_Ack.START = DI_Status_Check(&DI_Filter.START,((START_PORT->IDR>>START_PIN)&1));
@@ -55,6 +54,8 @@ static void Timer1_Callback(void const *arg)
 	DI_Ack.KK_H  = DI_Status_Check(&DI_Filter.KK_H,	((KK_ACK_PORT->IDR>>KK_ACK_PIN1)&1));
 	DI_Ack.KK_L  = DI_Status_Check(&DI_Filter.KK_L,	((KK_ACK_PORT->IDR>>KK_ACK_PIN2)&1));
 	Get_Adc_Status();//计算AD采样值
+	if(DI_Ack.JT == 0)	Type_DM.JiTing = 1;//急停按钮按下
+		else if(DI_Ack.JT == 1)	Type_DM.JiTing = 0;
 }	
 
 
@@ -67,42 +68,40 @@ unsigned char Board_C_Sta = 0;//0:C板不存在 1:C板通讯正常 0xFF:C板通讯超时
 //处理AB板数据上报到C板
 void System_Task(void const *argument)
 {
-	const unsigned short System_Task_Time = 125U;
-	static unsigned char STEP,t;
+	const unsigned short System_Task_Time = 100U;
+	static unsigned char t,STEP;
 	/*-拨码开关默认是高电平！*/
 	DIPSwitch.Bits_1 = GPIO_PinRead(DIP_SWITCH_PORT1,DIP_SWITCH_PIN1);//区分AB板
-	DIPSwitch.Bits_2 = GPIO_PinRead(DIP_SWITCH_PORT2,DIP_SWITCH_PIN2);//1开启0关闭接地检查
+	DIPSwitch.Bits_2 = GPIO_PinRead(DIP_SWITCH_PORT2,DIP_SWITCH_PIN2);//1750V模块0500v模块
 	DIPSwitch.Bits_3 = GPIO_PinRead(DIP_SWITCH_PORT3,DIP_SWITCH_PIN3);//1开启0关闭绝缘检查	
 	DIPSwitch.Bits_4 = GPIO_PinRead(DIP_SWITCH_PORT4,DIP_SWITCH_PIN4);//1开启上锁0关闭上锁
-	if(DIPSwitch.Bits_2 == 1)	{if(Check_PE())		Type_DM.DErr |= Geodesic;}//接地故障//第2位拨码开关开启接地检查
+//	if(Check_PE())		Type_DM.DErr |= Geodesic;//接地故障
 	if(DIPSwitch.Bits_1 != 1)	{Board_Type = 0X0B; TxMsg_ABC.ExtId=0x0ABC00B0; Type_DM.DErr &= ~Geodesic;}//读取拨码开关地址:默认A	接地检查由A板检查
+	if(DIPSwitch.Bits_2 == 1) ACDC_MAX_VOL = 7500;	else ACDC_MAX_VOL = 5000;//拨码开关第2决定 1=750V 0=500V
 	
 	while(1)
-	{
-		if(DI_Ack.JT == 0)	Type_DM.JiTing = 1;//急停按钮按下
-			else if(DI_Ack.JT == 1)	Type_DM.JiTing = 0;
-		
+	{	
 		ABC_Data_Deal(System_Task_Time);//解析C板数据
+		STEP = (STEP+1)%3;//0-1-2
 		switch(STEP)
 		{
 			case 0://桩状态/模块状态帧
-			{
 				if(Type_DM.DErr != 0)	Type_DM.DSta = 2;//桩故障
 					else if((BMS_STA == BEGIN)||(BMS_STA == STOP))	Type_DM.DSta = 0;//桩待机
 						else Type_DM.DSta = 1;//桩充电流程中
 				memcpy(TxMsg_ABC.Data,&Type_DM,sizeof(Type_DM));
-			}break;
+			break;
+			
 			case 1://BMS状态帧
-			{
 				Type_BMS.Step = BMS_STA;
+				Type_BMS.DErr = guzhang;
 				if(Data_6656.ChargStopChargingReason==0)	Type_BMS.Stop_Reason = Time_Out;//超时重连超过3次停止
 					else Type_BMS.Stop_Reason = Data_6656.ChargStopChargingReason;
 				if(Data_7936.IdentifyTimeOut == 0x01)	Type_BMS.time_out = BRM512_Timeout;
 					else if(Data_7936.ChargingParamTimeOut&0x01) Type_BMS.time_out = BCP1536_Timeout;
 						else if(Data_7936.ChargingParamTimeOut&0x04)	Type_BMS.time_out = BRO2304_Timeout;
 							else if(Data_7936.BMSChargingStaTimeOut&0x01) Type_BMS.time_out = BCS4352_Timeout;
-								else if(Data_7936.BMSChargingStaTimeOut&0x01) Type_BMS.time_out = BCL4096_Timeout;
-				Type_BMS.DErr = guzhang;			
+								else if(Data_7936.BMSChargingStaTimeOut&0x01) Type_BMS.time_out = BCL4096_Timeout;						
 				if(Data_6400.BMSFaultReason&0x03)	Type_BMS.BErr = Insulation;//绝缘故障
 					else if(Data_6400.BMSFaultReason&0x3c)	Type_BMS.BErr = BmsOutNetTemp;//BMS元件/输出连接器过温(2合1)
 						else if(Data_6400.BMSFaultReason&0xc0)	Type_BMS.BErr = ChargeNet;//充电连接器故障
@@ -116,26 +115,26 @@ void System_Task(void const *argument)
 				if((Data_6400.BMSStopChargingReason&0x05)||(Data_4352.PreSOC>98))	Type_BMS.BErr = Soc_Full;//充满停止（达到电压或者soc？）
 				Type_BMS.RemaChargTime = Data_4352.RemaChargTime;//0-600min
 				memcpy(TxMsg_ABC.Data,&Type_BMS,sizeof(Type_BMS));
-			}break;
+			break;
+			
 			case 2://电压电流SOC帧
-			{
 				Type_VolCur.Soc = Data_4352.PreSOC;//车反馈
 				Type_VolCur.CC  = AD_DATA.CC*10;	 //4.5v=45				
 				if(MeterSta == No_Link)
 				{
-					Type_VolCur.KWh =	dianliang;//无电表使用累加计算电量
-					Type_VolCur.Vol = Module_Status.Output_Vol;//无电表电压电流使用模块值
-					Type_VolCur.Cur =	Module_Status.Output_Cur;
+					Type_VolCur.KWh =	dianliang*10;//无电表使用累加计算电量
+					Type_VolCur.Vol = Module_Status.Output_Vol*10;//无电表电压电流使用模块值
+					Type_VolCur.Cur =	Module_Status.Output_Cur*10;
 				}else 
 				{
-					Type_VolCur.KWh = MeterData.kwh_realtime-MeterData.kwh_start;//连上电表使用电表数据
-					Type_VolCur.Vol = MeterData.vol;
-					Type_VolCur.Cur =	MeterData.cur;
+					Type_VolCur.KWh = (MeterData.kwh_realtime-MeterData.kwh_start)*10;//连上电表使用电表数据
+					Type_VolCur.Vol = MeterData.vol*10;
+					Type_VolCur.Cur =	MeterData.cur*10;
 				}
 				memcpy(TxMsg_ABC.Data,&Type_VolCur,sizeof(Type_VolCur));
-			}break;
+			break;
 			default:break;
-		}STEP = (STEP+1)%3;//0-1-2
+		}
 		
 		if(Board_C_Sta != 0)//只要连接了C板就循环发送
 		{
@@ -145,11 +144,9 @@ void System_Task(void const *argument)
 		}
 		
 		t = (t+1)%(1000/System_Task_Time);
-		if(t == 1)	
-		{
-			LcdShow();//显示任务1s刷新一次
-			Read_ElectricMeter_Data();//读电表数据
-		}
+		if(t == 1)	Read_ElectricMeter_Data();//读电表数据
+		if((t == 900/System_Task_Time)&&(Board_Type == 0X0A))	LcdShow();//显示任务1s刷新一次
+		
 		osDelay(System_Task_Time);
 	}
 }
@@ -163,11 +160,11 @@ static void ABC_Data_Deal(unsigned short Task_Time)
 		RX_Flag.ABC_Data_Rx_Flag = false;
 		if(ABC_DATA_RX.ExtId==0x0ABC00C0)//充电启停/暂停，模块分配
 		{
-			if(++count1 > 5)	
+			if(++count1 > (1000/Task_Time))	
 			{
 				Board_C_Sta = 0x01;//与C板通讯正常
 				Type_DM.DErr &= ~Disconnect_C;//故障恢复
-				GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,1);//收到数据灯5亮
+				LED5_ON;//收到数据灯4亮
 			}
 			Type_Control_Cmd.KK_Sta = ABC_DATA_RX.Data[3];
 			Type_Control_Cmd.Module_Assign = ABC_DATA_RX.Data[2];
@@ -177,12 +174,12 @@ static void ABC_Data_Deal(unsigned short Task_Time)
 		else if(ABC_DATA_RX.ExtId==0x0ABC00C1);//TODO:参数设置
 		count = 0;
 	}else {count++;count1 = 0;}
-	if((count > (5000/Task_Time))&&(Board_C_Sta==1))	
+	if((count > (3000/Task_Time))&&(Board_C_Sta==1))	
 	{
-		Board_C_Sta = 0xFF;//通讯故障（5s内未收到C板数据）
+		Board_C_Sta = 0xFF;//通讯故障（2s内未收到C板数据）
 		Type_Control_Cmd.CMD.Start_Stop = false;//关闭充电
 		Type_DM.DErr |= Disconnect_C;//只有连接上过C板再断开才会置故障位！
-		GPIO_PinWrite(LED_BOARD_PORT,LED5_PIN,0);//失联灯5熄灭
+		LED5_OFF;//失联灯4熄灭
 	}
 	
 	if(Board_C_Sta == 0)	

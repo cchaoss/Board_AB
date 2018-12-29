@@ -16,7 +16,7 @@ enum _Device_err
 {
 	Geodesic = 1<<0,			//接地故障（只需要检查A）*
 	Disconnect_C = 1<<1,	//与C板通讯故障
-	No_Module = 1<<2,		//无电源模块连接				 *
+	No_Module = 1<<2,			//无电源模块连接				 *
 	Dc_Table_Err = 1<<3,	//本枪直流表无连接(联网版本)
 };
 enum _manual_rea
@@ -46,14 +46,14 @@ enum _Timeout_Bms
 };
 enum _guzhang
 {
-	Lock_ERR = 1,//无法上锁
+	Lock_ERR = 1,			//无法上锁
 	GUN_Relay_Err = 2,//本枪继电器状态错误
 	KK_Relay_Err  = 3,//中间继电器错误
 //	Gun_Vol_ERR = 4,//枪端电压>10V
 //	Tap_Check_ERR=5,//泄放检查错误
 	Insulation_ERR= 6,//绝缘检测错误
-	Bat_Vol_ERR = 7,//电池电压与报文偏差过大
-	CC_ERR = 8,			//CC信号错误
+	Bat_Vol_ERR 	= 7,//电池电压不匹配
+	CC_ERR = 8,			  //CC信号错误
 };
 enum _Err_Bms
 {

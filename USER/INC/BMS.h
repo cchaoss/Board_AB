@@ -3,10 +3,16 @@
 
 #include "main.h"
 
-#define ACDC_MAX_VOL	7500				//750V
-#define ACDC_MIN_VOL	2000				//250V
-#define ACDC_MAX_CUR	(4000-3000)	//300A
+//ACDC_MAX_VOL 由拨码开关第2决定 1=750V 0=500V
+extern unsigned short ACDC_MAX_VOL;
+#define ACDC_MIN_VOL	2000				//200V
+#define ACDC_MAX_CUR	(4000-2500)	//250A
 #define ACDC_MIN_CUR	(4000-20)		//2A
+
+#define CC_Connect_MIN	2.8f
+#define CC_Connect_MAX	5.2f
+#define CC_Disconnect		5.5f
+
 enum _BMS_STA
 {
 	BEGIN 		= 0,//待插抢
@@ -16,10 +22,9 @@ enum _BMS_STA
 	SEND_2048 = 4,//电池准备
 	SEND_2560 = 5,//充电机准备
 	SEND_4608 = 6,//充电中
-	SEND_6656 = 7,//停止
-//	SEND_7424 = 8,
-	TIME_OUT  = 9,//超时
-	STOP 			=10,//停止
+	TIME_OUT  = 7,//超时
+	SEND_6656 = 8,//停止
+	STOP 			= 9,//停止
 };
 enum _bms_rx_num
 {

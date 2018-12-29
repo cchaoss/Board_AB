@@ -150,7 +150,7 @@ void Check_Hand(void)
 }
 
 												/* P0			 P0_CC		  P1_V			P1_A		  P1_SOC	P1_KW 		 P1_TIME		P2_EXP*/
-Display_Position SHOW = {{155,70},{125,289},{120,190},{120,217},{90,125},{120,240},{120,263},{258,58},{7,29,199},{295,50,175}};//ÇÎÆ¤UI
+Display_Position SHOW = {{155,71},{125,289},{122,195},{122,219},{95,125},{122,241},{122,264},{258,58},{7,29,199},{295,50,175}};//ÇÎÆ¤UI
 unsigned char Link_ok = 0;//LCDÆÁÁ¬½Ó×´Ì¬1Á¬½Ó 0Î´Á¬½Ó
 void LcdShow(void)
 {
@@ -168,13 +168,13 @@ void LcdShow(void)
 	{
 		if(Type_DM.DErr!=0)//×®×Ô¼ì´íÎó(ÕâÀïÊÇÕë¶Ô¼òÒ××®ÏÔÊ¾3¸öÄÚÈÝ)
 		{
-			switch_page(3);
-			if(Type_DM.DErr&Geodesic)	Show_hanzi(" ½ÓµØ¹ÊÕÏ",9,SHOW.P0[0],SHOW.P0[1]);
+			switch_page(4);//ÏµÍ³×Ô¼ì½çÃæ
+			if(Type_DM.DErr&Geodesic)	Show_hanzi(" Î´½ÓµØÏß",9,SHOW.P0[0],SHOW.P0[1]);
 				else if(Type_DM.DErr&No_Module)	Show_hanzi("ÎÞµçÔ´Ä£¿é",10,SHOW.P0[0],SHOW.P0[1]);
 					else if(Type_DM.DErr&Disconnect_C)	Show_hanzi("C°åÍ¨Ñ¶¹ÊÕÏ",11,SHOW.P0[0],SHOW.P0[1]);
 						else if(Type_DM.DErr&Dc_Table_Err)	Show_hanzi("ÎÞÖ±Á÷µç±í",10,SHOW.P0[0],SHOW.P0[1]);
 			if(MeterSta != No_Link)	Show_hanzi("M",1,SHOW.A_M[0],SHOW.A_M[2]);//Á¬ÉÏµç±í
-			if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else	Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£¡
+			if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£¡
 		}
 		else//×®×Ô¼ìÍ¨¹ý
 		{
@@ -183,22 +183,22 @@ void LcdShow(void)
 				case BEGIN:
 				case LOCKED:
 				{
-					switch_page(0);
+					switch_page(1);//´ý»ú½çÃæ
 					show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
 					if(Type_DM.JiTing == 1)	Show_hanzi("¼±Í£ÒÑ°´ÏÂ£¡",12,SHOW.P0[0],SHOW.P0[1]-8);
-						else if((AD_DATA.CC>3)&&(AD_DATA.CC<5))	Show_hanzi("Çë°´ÏÂÆôÍ£½¡",12,SHOW.P0[0],SHOW.P0[1]-8);
+						else if((AD_DATA.CC>3)&&(AD_DATA.CC<5))	Show_hanzi("Çë°´ÏÂÆôÍ£½¡",12,SHOW.P0[0],SHOW.P0[1]-10);
 							else Show_hanzi("Çë²å³äµçÇ¹",10,SHOW.P0[0],SHOW.P0[1]);
 					
 					if(MeterSta != No_Link)	Show_hanzi("M",1,SHOW.A_M[0],SHOW.A_M[2]);//Á¬ÉÏµç±í
-					if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else	Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£¡
+					if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£¡
 						
 				}break;
-				case SEND_9728:	switch_page(0);Show_hanzi("³äµçÎÕÊÖÖÐ",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_256:	switch_page(0);Show_hanzi("³äµç±æÊ¶ÖÐ",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_2048:	switch_page(0);Show_hanzi(" BMS×¼±¸"  ,9 ,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_2560:	switch_page(0);Show_hanzi("³äµç»ú×¼±¸",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;	
+				case SEND_9728:	switch_page(1);Show_hanzi("³äµçÎÕÊÖÖÐ",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_256:	switch_page(1);Show_hanzi("³äµç±æÊ¶ÖÐ",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_2048:	switch_page(1);Show_hanzi(" BMS×¼±¸"  ,9 ,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_2560:	switch_page(1);Show_hanzi("³äµç»ú×¼±¸",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;	
 				case SEND_4608:	
-					switch_page(1);
+					switch_page(2);//³äµç½çÃæ
 					show_number(Type_VolCur.Soc,SHOW.P1_Soc[0],SHOW.P1_Soc[1],3,0);//SOC
 					show_number(Type_VolCur.Vol,SHOW.P1_V[0],SHOW.P1_V[1],4,1);//µçÑ¹
 					show_number(Type_VolCur.Cur,SHOW.P1_A[0],SHOW.P1_A[1],4,1);//µçÁ÷ 
@@ -210,21 +210,21 @@ void LcdShow(void)
 					break;
 				case SEND_6656:
 				case STOP:
-					switch_page(2);
+					switch_page(3);//³äµçÍê³É½çÃæ
 					if(MeterSta != No_Link)	Show_hanzi("M",1,SHOW.A_M[0],SHOW.A_M[2]);//Á¬ÉÏµç±í
-					if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else	Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£
+					if(Board_Type == 0X0A)	Show_hanzi("A",1,SHOW.A_M[0],SHOW.A_M[1]);else Show_hanzi("B",1,SHOW.A_M[0],SHOW.A_M[1]);//¼òÒ××®ÒªÊ¹ÓÃA°å£¬ÕâÀïÏÔÊ¾·½±ãÉú²ú±æ±ð£
 					switch(Type_BMS.Stop_Reason)
 					{
 						case Time_Out:
 							Show_hanzi(" Í¨Ñ¶³¬Ê±",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.time_out)
 							{
-								case BRM512_Timeout:	Show_hanzi("   512" ,6,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
-								case BCP1536_Timeout:	Show_hanzi("   1536",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
-								case BRO2304_Timeout:	Show_hanzi("   2304",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
-								case BCS4352_Timeout:	Show_hanzi("   4352",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
-								case BCL4096_Timeout:	Show_hanzi("   4096",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
-								case BST6400_Timeout:	Show_hanzi("   6400",7,SHOW.P2_Exp[0],SHOW.P2_Exp[1]+10);break;
+								case BRM512_Timeout:	Show_hanzi("   BRM512",9,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCP1536_Timeout:	Show_hanzi("  BCP 1536",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BRO2304_Timeout:	Show_hanzi("  BRO 2304",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCS4352_Timeout:	Show_hanzi("  BCS 4352",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BCL4096_Timeout:	Show_hanzi("  BCL 4096",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case BST6400_Timeout:	Show_hanzi("  BST 6400",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;
 							}break;
 						case Err_Stop:
@@ -235,7 +235,7 @@ void LcdShow(void)
 								case GUN_Relay_Err:	Show_hanzi("Ç¹ÉÏ¼ÌµçÆ÷¹ÊÕÏ",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case KK_Relay_Err:	Show_hanzi("ÖÐ¼ä¼ÌµçÆ÷¹ÊÕÏ",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case Insulation_ERR:Show_hanzi("  ¾øÔµ´íÎó",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
-								case Bat_Vol_ERR:		Show_hanzi("µç³ØµçÑ¹Òì³£",12,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case Bat_Vol_ERR:		Show_hanzi("µç³ØµçÑ¹²»Æ¥Åä",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case CC_ERR:				Show_hanzi("CCµçÑ¹Òì³£",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;
 							}break;
@@ -243,7 +243,7 @@ void LcdShow(void)
 							Show_hanzi(" BMSÖÐÖ¹",9,SHOW.P0[0],SHOW.P0[1]);
 							switch(Type_BMS.BErr)
 							{
-								case Soc_Full:			Show_hanzi("ÒÑ³äÂú£¡£¡",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case Soc_Full:			Show_hanzi(" ÒÑ³äÂú£¡£¡",11,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case Insulation:		Show_hanzi("  ¾øÔµ¹ÊÕÏ",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case BmsOutNetTemp:	Show_hanzi("Êä³öÁ¬½ÓÆ÷¹ýÎÂ",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
 								case ChargeNet:			Show_hanzi("³äµçÁ¬½ÓÆ÷¹ÊÕÏ",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]-10);break;
@@ -270,7 +270,6 @@ void LcdShow(void)
 				default:break;
 			}
 		}
-	}
-	else	Check_Hand();
+	}else	Check_Hand();
 }
 

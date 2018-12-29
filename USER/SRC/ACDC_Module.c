@@ -84,8 +84,8 @@ void ACDC_Module_Task(void const *argument)
 			/*设置电压电流 开关机*/
 			case Set_Vol_Cur:
 				if(ACDC_VolCur_Buffer[3] != 0)//电压不为0
-				{
-					if(Board_Type == 0x0A)/*没有连接C板时 A板可以控制所有模块*/	
+				{	/*没有连接C板时 A板可以控制所有模块*/	
+					if(Board_Type == 0x0A)
 					{
 						if(Type_Control_Cmd.Module_Assign == 0xAA)	TxMsg_ACDC.ExtId = Set_Total_Vol_Cur;//设置所有模块输出电压电流
 							else TxMsg_ACDC.ExtId = Set_GroupA_Vol_Cur;//设置A组模块输出电压电流
@@ -137,7 +137,7 @@ void ACDC_Module_Task(void const *argument)
 			break;
 			default:break;
 		}
-		if(ACDC_STA < Read_Status)	Type_DM.DErr |= No_Module;	else Type_DM.DErr &= ~No_Module;//故障：无电源模块！
+		//if(ACDC_STA < Read_Status)	Type_DM.DErr |= No_Module;	else Type_DM.DErr &= ~No_Module;/*故障：无电源模块！*/
 		osDelay(ACDC_Module_Task_Time);
 	}
 }
