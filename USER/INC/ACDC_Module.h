@@ -29,8 +29,6 @@ typedef struct
 	uint8_t num;
 	uint8_t	numA;
 	uint8_t numB;
-	uint8_t staA;
-	uint8_t staB;
 }ACDC_Status;
 
 typedef struct

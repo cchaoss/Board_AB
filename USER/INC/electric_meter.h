@@ -4,8 +4,15 @@
 #include "main.h"
 
 /*485收发控制引脚*/
-#define RS485_RX_EN()		GPIO_ResetBits(GPIOA,GPIO_Pin_8)	//进入接收模式
+#define RS485_RX_EN()		GPIO_ResetBits(GPIOA,GPIO_Pin_8)//进入接收模式
 #define RS485_TX_EN()		GPIO_SetBits(GPIOA,GPIO_Pin_8)	//进入发送模式
+
+enum _Meter_Type
+{
+	No_Meter,
+	Single_Meter,
+	Three_Meter,
+};
 
 enum _ElecMeter_status
 {
@@ -31,6 +38,12 @@ typedef struct
 	float kwh_realtime;
 	float vol;
 	float cur;
+	float va;
+	float vb;
+	float vc;
+	float ia;
+	float ib;
+	float ic;
 }Meter_Data_Type;
 extern Meter_Data_Type MeterData;
 extern enum _ElecMeter_status MeterSta;

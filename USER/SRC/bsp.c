@@ -91,6 +91,7 @@ void Tim2_Init(unsigned short Psc,unsigned short Arr)
 	TIM_ClearFlag(TIM2, TIM_FLAG_Update);
 	TIM_ITConfig(TIM2,TIM_IT_Update,ENABLE);
 	TIM_Cmd(TIM2, ENABLE);	
+	dianliang = 0;
 	ChargTime = 0;
 }
 
@@ -155,14 +156,17 @@ void delay_us(u32 nTimer)
 
 void Bsp_init(void)
 {
-	//Notes:1.system_stm32f10x.c 1036行修改晶振8821 stm32F10x.h 122行25M改为8M
+	/*Notes:由于板子晶振用的外部8M，需要修改以下文件
+		1.system_stm32f10x.c	1036行修改晶振8821 
+		2.stm32F10x.h  122行25M改为8M								*/
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);//嵌套向量中断控制器组选择，中断分组
 	DIDO_init();//初始化硬件IO
-	BMS_Can_Init();//初始化与BMS通讯的CAN口
-	ACDC_Module_Can_Init();//初始化与电源模块通讯的CAN口
-	
-	ADCx_Init();
+	ADCx_Init();//初始化内部ADC采集
 	LCD_UART_Init(435200);//初始化LCD屏幕串口	244800	870400
 	METER_UART_Init(2400);//初始化电表485串口 2400 9600
+	/*Notes:要初始化CAN1 才能正常使用CAN2的接受！*/
+	BMS_Can_Init();				 //初始化与BMS通讯的CAN口
+	ACDC_Module_Can_Init();//初始化与电源模块通讯的CAN口
+
 	IWDG_Init(IWDG_Prescaler_64 ,1250);//Tout=(4*2^Prescaler*Reload)/40单位:ms 这里是2s溢出
 }

@@ -59,10 +59,18 @@ void ADCx_Init(void)
 	ADC_SoftwareStartConvCmd(ADC_x, ENABLE);
 }
 
-AD_VALUE AD_DATA;
+//开始绝缘检查
 unsigned char insulation_flag;
+void Start_Insulation_Check(void)
+{
+	insulation_flag = 1;//开启绝缘检查标志
+	AD_DATA.VT_Return = 0;//清除绝缘错误
+	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
+	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);//闭合绝缘检查继电器
+}
+
+AD_VALUE AD_DATA;
 float VTCalibrate[2];//保存的绝缘检查校准值
-//float t1,t2，g1,g2;
 void Get_Adc_Status(void)
 {
 	static char count = 0;
@@ -90,32 +98,21 @@ void Get_Adc_Status(void)
 					gg = AD_DATA.VT2 - VTCalibrate[1];
 					VT = (AD_DATA.VT1-VTCalibrate[0])/(-VT)*847.5;
 				}
-				if((gg < 200)||(VT < 500*0.2f))	AD_DATA.VT_Return = 1;//绝缘检查错误！100-500欧/V报警可以充电 这里取200欧/V*500=100k以下报警不能充电
+				if((gg < 200)||(VT < Insulation_Check_VOL*0.2f))	AD_DATA.VT_Return = 1;//绝缘检查错误！100-500欧/V报警可以充电 这里取200欧/V*500=100k以下报警不能充电
+				insulation_flag = 0;//清除绝缘检查标志
+				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
+				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//断开绝缘检查继电器
 			}
 		}/*以上为绝缘检查*/
 		AD_DATA.CC	= temp[2]/6*CC_K;//3.3V基准
-//		AD_DATA.T1 	= temp[3]/6;
-//		AD_DATA.T2 	= temp[4]/6;
+		AD_DATA.T1 	= temp[3]/6;
+		AD_DATA.T2 	= temp[4]/6;
 		for(char i=0;i<CHANNEL_NUM;i++)	temp[i] = 0;
 		count = 0;
 	}
 	else
 	{
 		count++;
-		for(char i=0;i<CHANNEL_NUM;i++)
-			temp[i] += ADC_RAW_DATA[i];
+		for(char i=0;i<CHANNEL_NUM;i++)	temp[i] += ADC_RAW_DATA[i];
 	}
-//	g1 = ADC_RAW_DATA[3];
-//	g2 = ADC_RAW_DATA[4];
-//	LPF_1_(10,0.02f,ADC_RAW_DATA[3],t1);
-//	LPF_1_(10,0.02f,ADC_RAW_DATA[4],t2);
-}
-
-//开始绝缘检查
-void Start_Insulation_Check(void)
-{
-	insulation_flag = 1;
-	AD_DATA.VT_Return = 0;//清除绝缘错误
-	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,1);
-	GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,1);
 }

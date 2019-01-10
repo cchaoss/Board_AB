@@ -48,7 +48,6 @@ typedef struct
 	uint8_t PGN_S;		//报文PGN
 	void *Data;
 }RX_BMS;  	
-
 //发送给BMS的数据结构
 typedef struct
 {
@@ -60,7 +59,6 @@ typedef struct
 	uint8_t Period;				//发送周期ms
 	void *Data;
 }TX_BMS;  	
-
 #pragma pack(1)//强制1字节对齐
 /*************************充电桩发给BMS的数据****************************/
 typedef struct
@@ -209,7 +207,7 @@ extern stuPGN4608Type Data_4608;
 extern stuPGN6656Type Data_6656;
 extern stuPGN6400Type Data_6400;
 extern stuPGN7936Type Data_7936;
-extern unsigned char guzhang;
+extern enum _guzhang guzhang;
 extern enum _BMS_STA BMS_STA;
 static void ACDC_Set_Vol_Cur(short vol, short cur);
 static void BMS_Data_Init(void);

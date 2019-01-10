@@ -40,9 +40,8 @@ typedef struct
 }AD_VALUE;
 extern AD_VALUE AD_DATA;
 
+#define Insulation_Check_VOL 500 //¾øÔµ¼ì²éµçÑ¹500v
 #define LPF_1_(hz,t,in,out) ((out) += ( 1 / ( 1 + 1 / ( (hz) *3.14159f *(t) ) ) ) *( (in) - (out) ))
-
-extern unsigned char insulation_flag;
 
 void ADCx_Init(void);
 void Get_Adc_Status(void);

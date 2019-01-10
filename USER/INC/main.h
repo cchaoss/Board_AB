@@ -46,6 +46,7 @@ enum _Timeout_Bms
 };
 enum _guzhang
 {
+	None = 0,					//无故障
 	Lock_ERR = 1,			//无法上锁
 	GUN_Relay_Err = 2,//本枪继电器状态错误
 	KK_Relay_Err  = 3,//中间继电器错误
@@ -64,9 +65,9 @@ enum _Err_Bms
 	BatTemp = 6,//电池组温度过高
 	HighRelay = 7,//高压继电器故障
 	Vol_2 = 8,//检查点2电压检查故障
-	CurOver = 9,//电流过大
+//	CurOver = 9,//电流过大
 	CurUnknown=10,//电流不可信
-	VolErr = 11,//电压异常
+//	VolErr = 11,//电压异常
 	VolUnknown=12,//电压不可信
 };
 
@@ -132,7 +133,8 @@ extern Control_Type	Type_Control_Cmd;
 
 extern unsigned char Board_Type;//A B板定义0X0A 0X0B
 extern unsigned char Board_C_Sta;//AB板与C板连接状态：0无连接 1 连接正常 FF通讯超时重连
-static void ABC_Data_Deal(unsigned short Task_Time);
+static void ABC_Data_Deal_RX(unsigned short Task_Time);
+static void ABC_Data_Deal_TX(unsigned char Sta);
 static void Timer1_Callback(void const *arg);
 
 void System_Task(void const *argument);

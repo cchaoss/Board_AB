@@ -11,11 +11,11 @@ enum _ACDC_STA ACDC_STA = Set_Group;
 void ACDC_Module_Task(void const *argument)
 {
 	const unsigned short ACDC_Module_Task_Time = 125U;
-	static unsigned char number,module_init_time;
+	static unsigned char number;
 	static bool last_Module_Assign;
-	Module_Rx_Flag.ON_OFF_STA = true;
 	while(1)
 	{
+		if(ACDC_STA < Read_Status)	Type_DM.DErr |= No_Module;	else Type_DM.DErr &= ~No_Module;/*故障：无电源模块！*/
 		ACDC_RxMsg_Deal();//处理模块应答的数据
 		switch(ACDC_STA)
 		{
@@ -26,9 +26,8 @@ void ACDC_Module_Task(void const *argument)
 					if(Board_C_Sta == 0)	ACDC_STA = Set_Vol_Cur;//没有连接C板跳过验证A组模块数量步骤
 						else ACDC_STA = Group_Verify;			
 				}
-				else if(++module_init_time > 10000/ACDC_Module_Task_Time)//上电10s等待模块硬件初始化完成
+				else //if(++module_init_time > 9000/ACDC_Module_Task_Time)//上电等待~10s模块硬件初始化完成
 				{	
-					module_init_time = (10000/ACDC_Module_Task_Time) + 1;
 					TxMsg_ACDC.ExtId = Total_Number_Read;//读取模块总数
 					memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);		
 				}
@@ -41,20 +40,21 @@ void ACDC_Module_Task(void const *argument)
 					{
 						Module_Rx_Flag.A_num = false;
 						if(Module_Status.numA == 0)	ACDC_STA = Set_Group;//重新开始							
-							else {Type_DM.MNum = Module_Rx_Flag.A_num;	ACDC_STA = Set_Vol_Cur;}//至少有一个模块就可以正常工作
+							else {Type_DM.MNum = Module_Status.numA;	ACDC_STA = Set_Vol_Cur;}//至少有一个模块就可以正常工作
 					}
-					else{TxMsg_ACDC.ExtId = GroupA_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//读取A组模块数量
+					else	TxMsg_ACDC.ExtId = GroupA_Number_Read;//读取A组模块数量
 				}
-				else if(Board_Type == 0x0B)//B板
+				else//B板
 				{
 					if(Module_Rx_Flag.B_num)
 					{
 						Module_Rx_Flag.B_num = false;
 						if(Module_Status.numB == 0)	ACDC_STA = Set_Group;//重新开始		
-							else {Type_DM.MNum = Module_Rx_Flag.B_num;	ACDC_STA = Set_Vol_Cur;}//至少有一个模块就可以正常工作
+							else {Type_DM.MNum = Module_Status.numB;	ACDC_STA = Set_Vol_Cur;}//至少有一个模块就可以正常工作
 					}
-					else{TxMsg_ACDC.ExtId = GroupB_Number_Read;	CAN_Transmit(CAN2, &TxMsg_ACDC);}//读取A组模块数量	
+					else	TxMsg_ACDC.ExtId = GroupB_Number_Read;//读取B组模块数量	
 				}
+				CAN_Transmit(CAN2, &TxMsg_ACDC);
 			break;
 			/*读取模块状态*/
 			case Read_Status:
@@ -137,7 +137,6 @@ void ACDC_Module_Task(void const *argument)
 			break;
 			default:break;
 		}
-		//if(ACDC_STA < Read_Status)	Type_DM.DErr |= No_Module;	else Type_DM.DErr &= ~No_Module;/*故障：无电源模块！*/
 		osDelay(ACDC_Module_Task_Time);
 	}
 }
