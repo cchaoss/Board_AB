@@ -19,15 +19,9 @@
 #define ADC_DMA_CHANNEL      DMA1_Channel1
 
 #define CHANNEL_NUM	 5	//转换通道个数
-#define CC_K	0.003216f
-
-enum _CCStatus
-{
-	PlugSta_Unknown = 0,		//未知状态
-	PlugSta_Open,						//插入状态
-	PlugSta_Close,					//拔出状态
-};
-
+#define CC_K	0.003216f	//CC电压校准系数
+#define T1_K  1
+#define T2_K  1
 
 typedef struct
 {
@@ -40,8 +34,7 @@ typedef struct
 }AD_VALUE;
 extern AD_VALUE AD_DATA;
 
-#define Insulation_Check_VOL 500 //绝缘检查电压500v
-#define LPF_1_(hz,t,in,out) ((out) += ( 1 / ( 1 + 1 / ( (hz) *3.14159f *(t) ) ) ) *( (in) - (out) ))
+#define LPF_1_(hz,t,in,out) ((out) += ( 1 / ( 1 + 1 / ( (hz) *3.1415926f *(t) ) ) ) *( (in) - (out) ))
 
 void ADCx_Init(void);
 void Get_Adc_Status(void);

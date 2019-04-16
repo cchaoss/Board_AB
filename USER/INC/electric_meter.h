@@ -38,12 +38,6 @@ typedef struct
 	float kwh_realtime;
 	float vol;
 	float cur;
-	float va;
-	float vb;
-	float vc;
-	float ia;
-	float ib;
-	float ic;
 }Meter_Data_Type;
 extern Meter_Data_Type MeterData;
 extern enum _ElecMeter_status MeterSta;

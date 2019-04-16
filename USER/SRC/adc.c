@@ -1,5 +1,6 @@
 #include "adc.h"
 #include "main.h"
+#include "bms.h"
 
 unsigned short ADC_RAW_DATA[CHANNEL_NUM];//缓存adc各通道的值
 //初始化ADC相关的IO口并启动AD采集以及DMA搬运
@@ -80,7 +81,7 @@ void Get_Adc_Status(void)
 	float VT = 0;
 	if(count == 6)
 	{	/****************/
-		if(once){once = false;VTCalibrate[0] = temp[0]/6;VTCalibrate[1] = temp[1]/6;}//保存绝缘检查的校准值
+		if(once)	{once = false;VTCalibrate[0] = temp[0]/6;VTCalibrate[1] = temp[1]/6;}//保存绝缘检查的校准值
 		if(insulation_flag)
 		{
 			if(insulation_flag++>1)//确保电压稳定后在检查值（继电器闭合会出现波动）
@@ -98,15 +99,15 @@ void Get_Adc_Status(void)
 					gg = AD_DATA.VT2 - VTCalibrate[1];
 					VT = (AD_DATA.VT1-VTCalibrate[0])/(-VT)*847.5;
 				}
-				if((gg < 200)||(VT < Insulation_Check_VOL*0.2f))	AD_DATA.VT_Return = 1;//绝缘检查错误！100-500欧/V报警可以充电 这里取200欧/V*500=100k以下报警不能充电
+				if((gg < 200)||(VT < Data_9984.AllowHightVolt*0.1f*0.2f))	AD_DATA.VT_Return = 1;//绝缘检查错误！100-500欧/V报警可以充电 这里取200欧/V*500=100k以下报警不能充电
 				insulation_flag = 0;//清除绝缘检查标志
 				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN1,0);
 				GPIO_PinWrite(JUEYUAN_RELAY_PORT,JUYUAN_RELAY_PIN2,0);//断开绝缘检查继电器
 			}
 		}/*以上为绝缘检查*/
 		AD_DATA.CC	= temp[2]/6*CC_K;//3.3V基准
-		AD_DATA.T1 	= temp[3]/6;
-		AD_DATA.T2 	= temp[4]/6;
+		AD_DATA.T1 	= temp[3]/6*T1_K;
+		AD_DATA.T2 	= temp[4]/6*T2_K;
 		for(char i=0;i<CHANNEL_NUM;i++)	temp[i] = 0;
 		count = 0;
 	}

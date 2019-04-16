@@ -207,6 +207,7 @@ extern stuPGN4608Type Data_4608;
 extern stuPGN6656Type Data_6656;
 extern stuPGN6400Type Data_6400;
 extern stuPGN7936Type Data_7936;
+extern stuPGN9984Type Data_9984;
 extern enum _guzhang guzhang;
 extern enum _BMS_STA BMS_STA;
 static void ACDC_Set_Vol_Cur(short vol, short cur);

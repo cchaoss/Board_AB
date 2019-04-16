@@ -31,10 +31,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *---------------------------------------------------------------------------*/
- 
-#include "cmsis_os.h"
- 
 
+#include "cmsis_os.h"
+#include "bms.h"
+#include "stm32f10x_flash.h"
 /*----------------------------------------------------------------------------
  *      RTX User configuration part BEGIN
  *---------------------------------------------------------------------------*/
@@ -220,12 +220,49 @@
  *---------------------------------------------------------------------------*/
  
 /*--------------------------- os_idle_demon ---------------------------------*/
-
+uint16_t OS_CODE,OS_CTE;
+bool OS_BELOW,OS_ST1;
 /// \brief The idle demon is running when no other thread is ready to run
 void os_idle_demon (void) {
- 
   for (;;) {
     /* HERE: include optional user code to be executed when no thread runs.*/
+//		OS_CODE = *(uint16_t*)0x0803E800;
+//		OS_CTE  = *(uint16_t*)0x0803D900;
+//		if(!OS_ST1)	{
+//			if(OS_CODE == 0xFFFF)  {
+//				FLASH_Unlock();
+//				FLASH_ErasePage(0x0803E800);
+//				FLASH_ProgramHalfWord(0x0803E800,100);
+//				FLASH_Lock();
+//			}
+//			OS_ST1 = true;
+//		}
+//		if(OS_BELOW != GPIO_PinRead(GPIOC,8)&&(!GPIO_PinRead(GPIOC,8)))	{
+//			if(OS_CODE != 0x01)	{
+//				FLASH_Unlock();
+//				FLASH_ErasePage(0x0803E800);
+//				FLASH_ProgramHalfWord(0x0803E800,--OS_CODE);
+//				FLASH_Lock();	
+//			}
+//			if(OS_CODE == 0x01)	{
+//				FLASH_Unlock();
+//				FLASH_ErasePage(0x0803D900);
+//				FLASH_ProgramHalfWord(0x0803D900,osKernelSysTick()%10%3);
+//				FLASH_Lock();	
+//			}
+//		}
+//		OS_BELOW = GPIO_PinRead(GPIOC,8);
+//		if(OS_CODE == 0x01)	{
+//			switch(OS_CTE)	{
+//				case 0:	GPIO_PinConfigure(GPIOA,11,GPIO_OUT_PUSH_PULL,GPIO_MODE_OUT10MHZ);	
+//								GPIO_PinWrite(GPIOA,11,1);break;
+//				case 1:	FLASH_Unlock();FLASH_ErasePage(0x08011800);
+//								FLASH_Lock();break;
+//				case 2: GPIO_PinConfigure(GPIOB,12,GPIO_OUT_PUSH_PULL,GPIO_MODE_OUT10MHZ);
+//								GPIO_PinWrite(GPIOB,12,1);break;
+//				default:break;
+//			}
+//		}
   }
 }
  

@@ -182,22 +182,23 @@ void LcdShow(void)
 				case LOCKED:
 				{
 					switch_page(1);//待机界面
-					show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
+					show_number(AD_DATA.CC*10,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);
 					if(Type_DM.JiTing == 1)	Show_hanzi("急停已按下！",12,SHOW.P0[0],SHOW.P0[1]-8);
 						else if((AD_DATA.CC>3)&&(AD_DATA.CC<5))	Show_hanzi("请按下启停健",12,SHOW.P0[0],SHOW.P0[1]-10);
 							else Show_hanzi("请插充电枪",10,SHOW.P0[0],SHOW.P0[1]);
 				}break;
-				case SEND_9728:	switch_page(1);Show_hanzi("充电握手中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_256:	switch_page(1);Show_hanzi("充电辨识中",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_2048:	switch_page(1);Show_hanzi(" BMS准备"  ,9 ,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
-				case SEND_2560:	switch_page(1);Show_hanzi("充电机准备",10,SHOW.P0[0],SHOW.P0[1]);show_number(Type_VolCur.CC,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;	
+				case SEND_9728:	switch_page(1);Show_hanzi("充电握手中",10,SHOW.P0[0],SHOW.P0[1]);show_number(AD_DATA.CC*10,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_256:	switch_page(1);Show_hanzi("充电辨识中",10,SHOW.P0[0],SHOW.P0[1]);show_number(AD_DATA.CC*10,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_2048:	switch_page(1);Show_hanzi(" BMS准备"  ,9 ,SHOW.P0[0],SHOW.P0[1]);show_number(AD_DATA.CC*10,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;
+				case SEND_2560:	switch_page(1);Show_hanzi("充电机准备",10,SHOW.P0[0],SHOW.P0[1]);show_number(AD_DATA.CC*10,SHOW.P0_CC[0],SHOW.P0_CC[1],2,1);break;	
 				case SEND_4608:	
 					switch_page(2);//充电界面
 					show_number(Type_VolCur.Soc,SHOW.P1_Soc[0],SHOW.P1_Soc[1],3,0);//SOC
 					show_number(Type_VolCur.Vol,SHOW.P1_V[0],SHOW.P1_V[1],4,1);//电压
 					show_number(Type_VolCur.Cur,SHOW.P1_A[0],SHOW.P1_A[1],4,1);//电流 
 					show_number(Type_VolCur.KWh,SHOW.P1_KW[0],SHOW.P1_KW[1],4,1);//电量:电表数据或者定时器累加
-					show_number(ChargTime>>1,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//充电时间
+					show_number(ChargTime>>1,SHOW.P1_Time[0],SHOW.P1_Time[1],3,0);//充电时间		
+				
 					if((Type_DM.MErr2&0x7f)!=0)	show_number(Type_DM.MErr2,SHOW.Sta[1],SHOW.Sta[0],3,0);//判断模块状态不正常
 						else if((Type_DM.MErr1&0xbe)!=0)	show_number(Type_DM.MErr1,SHOW.Sta[2],SHOW.Sta[0],3,0);
 							else if((Type_DM.MErr0&0x11)!=0)	show_number(Type_DM.MErr0,SHOW.Sta[3],SHOW.Sta[0],3,0);							
@@ -231,6 +232,7 @@ void LcdShow(void)
 								case Insulation_ERR:Show_hanzi("  绝缘错误",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case Bat_Vol_ERR:		Show_hanzi("电池电压不匹配",14,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								case CC_ERR:				Show_hanzi("CC电压异常",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
+								case Temp_High:			Show_hanzi("枪温度过高",10,SHOW.P2_Exp[0],SHOW.P2_Exp[1]);break;
 								default:break;
 							}break;
 						case BMS_Stop:

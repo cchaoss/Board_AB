@@ -55,6 +55,7 @@ enum _guzhang
 	Insulation_ERR= 6,//绝缘检测错误
 	Bat_Vol_ERR 	= 7,//电池电压不匹配
 	CC_ERR = 8,			  //CC信号错误
+	Temp_High = 9,		//枪温度过高
 };
 enum _Err_Bms
 {
@@ -91,7 +92,7 @@ typedef struct
 	uint8_t DErr;				//桩故障：锁 外侧电压 绝缘 DC外侧电压与电池电压<5% 继电器错误
 	uint8_t BErr;				//BMS中止原因
 	uint8_t Manual;			//人工中止原因：1急停 2启停 3APP 4刷卡
-	uint16_t RemaChargTime;//剩余充电时间0-600min
+	uint8_t Gun_link;		//插抢状态 1插枪 0未插抢
 }Bms_Type;
 typedef struct
 {
@@ -99,16 +100,15 @@ typedef struct
 	uint16_t Cur;	//1205=120.5A
 	uint16_t KWh;	//5505=550.5KW
 	uint8_t  Soc;	//88%
-	uint8_t   CC;	//CC电压
 }VolCur_Type;
 /**C->AB数据内容**/
 typedef struct
 {
-	char	Start_Stop:1;//0X00关闭A枪，0X01开启
-	char  Suspend:1;	 //0X01暂停使能
+	char	Start_Stop:2;//0X00关闭A枪，0X01开启 0x02暂停充电
+	char  Suspend:1;	 //0X01模块暂停使能
 	char	Type:1;			 //0x00 APP启停 0x01 刷卡启停
 	char	Account:1;	 //结算标记0未结算，1结算完成
-	char 	reserved:4;
+	char 	reserved:3;
 }Start_Stop_Cmd;
 typedef struct
 {
@@ -134,7 +134,7 @@ extern Control_Type	Type_Control_Cmd;
 extern unsigned char Board_Type;//A B板定义0X0A 0X0B
 extern unsigned char Board_C_Sta;//AB板与C板连接状态：0无连接 1 连接正常 FF通讯超时重连
 static void ABC_Data_Deal_RX(unsigned short Task_Time);
-static void ABC_Data_Deal_TX(unsigned char Sta);
+static void ABC_Data_Deal_TX(void);
 static void Timer1_Callback(void const *arg);
 
 void System_Task(void const *argument);

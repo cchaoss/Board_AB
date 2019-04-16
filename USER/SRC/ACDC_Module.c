@@ -58,11 +58,8 @@ void ACDC_Module_Task(void const *argument)
 			break;
 			/*读取模块状态*/
 			case Read_Status:
-				if(Board_Type == 0x0A)//轮询A+B组所有模块状态 温度信息
-				{	
-					TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//读取模块状态/温度/组号
-					if(++number==Module_Status.num)	number = 0;
-				}
+				TxMsg_ACDC.ExtId = Single_Module_Sta_Read|(number<<8);//轮询A+B组所有模块状态 温度信息
+				if(++number==Module_Status.num)	number = 0;				
 				memset(TxMsg_ACDC.Data,0,8);	CAN_Transmit(CAN2, &TxMsg_ACDC);
 				ACDC_STA =	Read_Vol_Cur;
 			break;
@@ -83,7 +80,7 @@ void ACDC_Module_Task(void const *argument)
 			break;
 			/*设置电压电流 开关机*/
 			case Set_Vol_Cur:
-				if(ACDC_VolCur_Buffer[3] != 0)//电压不为0
+				if((ACDC_VolCur_Buffer[0]|ACDC_VolCur_Buffer[1]|ACDC_VolCur_Buffer[2]|ACDC_VolCur_Buffer[3]) != 0)//电压不为0
 				{	/*没有连接C板时 A板可以控制所有模块*/	
 					if(Board_Type == 0x0A)
 					{
@@ -116,19 +113,19 @@ void ACDC_Module_Task(void const *argument)
 					}
 				}
 				else//电压为0则执行关机
-				{
+				{					
 					if(!Module_Rx_Flag.ON_OFF_STA)/*开过机才关机一次*/
 					{
 						Module_Rx_Flag.ON_OFF_STA = true;
 						if(Board_Type == 0x0A)	
 						{
-							if(Type_Control_Cmd.Module_Assign == 0xAA) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
-								else TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;//A组模块关机
+							if(Type_Control_Cmd.Module_Assign == 0xAB) TxMsg_ACDC.ExtId = GroupA_Module_ONOFF;//A组模块关机
+								else TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
 						}
 						else if(Board_Type == 0x0B)	
 						{
-							if(Type_Control_Cmd.Module_Assign == 0xBB) TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
-							 else TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;//B组模块关机
+							if(Type_Control_Cmd.Module_Assign == 0xAB) TxMsg_ACDC.ExtId = GroupB_Module_ONOFF;//B组模块关机
+							 else TxMsg_ACDC.ExtId = Total_Module_ONOFF;//所有模块关机(当分配模块暂停关机时，关闭所有模块)
 						}
 						memset(TxMsg_ACDC.Data,0,8);	TxMsg_ACDC.Data[0] = 1;	CAN_Transmit(CAN2, &TxMsg_ACDC);//1为关机
 					}
@@ -158,19 +155,6 @@ static void ACDC_RxMsg_Deal(void)
 				char *V = (char*)&Module_Status.Output_Vol,*C = (char*)&Module_Status.Output_Cur;
 				for(char i = 0;i < 4;i++)	{*V++ = ACDC_RX.Data[3-i];	*C++ = ACDC_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
 			}
-			
-			if((ACDC_RX.ExtId >= Single_Module_Sta_Ack)&&(ACDC_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
-			{
-				memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取所有模块组号 温度 状态
-				Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
-				Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
-				Type_DM.MErr0 = Module_Sta_Ack_type.sta0;//模块状态位
-//				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态不正常
-//				{
-//					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
-//					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
-//				}
-			}
 		}
 		else if(Board_Type == 0x0B)
 		{
@@ -182,6 +166,19 @@ static void ACDC_RxMsg_Deal(void)
 				for(char i = 0;i < 4;i++)	{*V++ = ACDC_RX.Data[3-i];	*C++ = ACDC_RX.Data[7-i];}//IEEE-754单精度浮点要把数据倒过来
 			}
 		}		
+		
+		if((ACDC_RX.ExtId >= Single_Module_Sta_Ack)&&(ACDC_RX.ExtId <= Single_Module_Sta_Ack+Module_Status.num))
+		{
+			memcpy(&Module_Sta_Ack_type.group,&ACDC_RX.Data[2],6);//读取所有模块组号 温度 状态
+			Type_DM.MErr2 = Module_Sta_Ack_type.sta2;
+			Type_DM.MErr1 = Module_Sta_Ack_type.sta1;
+			Type_DM.MErr0 = Module_Sta_Ack_type.sta0;//模块状态位
+//				if(((Module_Sta_Ack_type.sta2&0x7f)!=0)||((Module_Sta_Ack_type.sta1&0xbe)!=0)||((Module_Sta_Ack_type.sta0&0x11)!=0))//判断模块状态不正常
+//				{
+//					//TxMsg_ACDC.ExtId = 0x029400F0U;TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置模块0绿灯闪烁
+//					//TxMsg_ACDC.ExtId = (0x029400F0U|(ADCD_RX.ExtId&0x000f));TxMsg_ACDC.Data[0] = 1;CAN_Transmit(CAN2, &TxMsg_ACDC);//设置对应模块绿灯闪烁,何时取消闪烁？
+//				}
+		}
 		RX_Flag.ACDC_Rx_Flag = false;
 	}
 }

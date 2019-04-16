@@ -8,18 +8,18 @@ Ammeter single_cmd[3] =
 	{0x00,0x01,0x02,0x02,0x03,0.001},	//查询电流
 };
 
-enum _Meter_Type Meter_Type;
 Meter_Data_Type MeterData;
-unsigned char RS485_DataLong,Cmd_Step;
+unsigned char RS485_DataLong;
+enum _Meter_Type Meter_Type = No_Meter;
 enum _ElecMeter_status MeterSta = No_Link;
 
 #define METER_RX_DMA DMA1_Channel5
 #define METER_TX_DMA DMA1_Channel4
 
-#define METER_RX_SIZE	32//接受
+#define METER_RX_SIZE	32//最大接受长度
 unsigned char METER_Rx_Buffer[METER_RX_SIZE];//接受数据缓存
-#define METER_TX_SIZE	20//发送
-unsigned char METER_Tx_Buffer[METER_TX_SIZE];//发送
+#define METER_TX_SIZE	20
+unsigned char METER_Tx_Buffer[METER_TX_SIZE];
 //UART 1
 void METER_UART_Init(uint32_t bound)
 {
@@ -119,6 +119,7 @@ static void Check_ElecMeter_Addr(void)
 unsigned char ReadDataCmd[10] = {0x68,0x00,0x00,0x00,0x00,0x00,0x00,0x68,0x11,0x04};//控制码0x11-请求读电表数据
 static void Send_read_cmd(void)
 {
+	static char Cmd_Step;
 	unsigned short Sum;
 	memcpy(METER_Tx_Buffer,ReadDataCmd,10);
 	METER_Tx_Buffer[10] = single_cmd[Cmd_Step].u8DI0 + 0x33;//前面的已经被默认赋值不需要进行改动
@@ -157,9 +158,9 @@ void Send_485_Data(void)
 
 	if(MeterSta == No_Link)//电表是断线状态
 	{
-		if(BaudRate_t == 7)	METER_UART_Init(9600);/*尝试以9600波特率跟电表通讯*/
-		if(BaudRate_t ==15)	METER_UART_Init(2400);/*尝试以2400波特率跟电表通讯*/
-		BaudRate_t = (BaudRate_t+1)%16;//0-19 No_Link下8s切换一次波特率
+		if(BaudRate_t == 15)	METER_UART_Init(9600);/*尝试以9600波特率跟电表通讯*/
+		if(BaudRate_t == 31)	METER_UART_Init(2400);/*尝试以2400波特率跟电表通讯*/
+		BaudRate_t = (BaudRate_t+1)%32;//0-31 No_Link下8s切换一次波特率
 		Check_ElecMeter_Addr();//发信号查询电表地址
 	}
 	else if(MeterSta == ReadData)//请求读数据
@@ -170,7 +171,7 @@ void Send_485_Data(void)
 	}
 	else if(MeterSta == WaitData)//电表等待电表数据状态
 	{
-		if(++t >= 5)//超时5s
+		if(++t >= 10)//超时5s
 		{
 			t = 0;	MeterSta = No_Link;//电表离线，尝试重新连接
 		}
@@ -225,7 +226,7 @@ void Deal_485_Data(void)
 }
 
 
-void Read_ElectricMeter_Data(void)//1s一次
+void Read_ElectricMeter_Data(void)//500ms一次
 {
 	if(Uart_Flag.Meter_Rx_Flag)
 	{

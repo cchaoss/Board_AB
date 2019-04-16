@@ -133,7 +133,6 @@ void ACDC_Module_Can_Init(void)
 	NVIC_Init(&NVIC_InitStructure);
 }
 
-CanRxMsg *bbb;
 /************************BMS÷–∂œ¥¶¿Ì*****************************/
 Can_Rx_FlagBits	RX_Flag;
 CanRxMsg BMS_RX_0;
@@ -165,4 +164,3 @@ void CAN2_RX1_IRQHandler(void)
   CAN_Receive(CAN2, CAN_FIFO1, &ABC_DATA_RX);
 	RX_Flag.ABC_Data_Rx_Flag = true;
 }
-
